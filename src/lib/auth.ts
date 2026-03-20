@@ -3,8 +3,11 @@ import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 import { requireEnv } from '@/lib/env';
 
-const SECRET = new TextEncoder().encode(requireEnv('JWT_SECRET'));
 const COOKIE_NAME = 'auth-token';
+
+function getSecret() {
+  return new TextEncoder().encode(requireEnv('JWT_SECRET'));
+}
 
 export interface JWTPayload {
   id: number;
@@ -21,12 +24,12 @@ export async function signToken(payload: JWTPayload): Promise<string> {
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('24h')
     .setIssuedAt()
-    .sign(SECRET);
+    .sign(getSecret());
 }
 
 export async function verifyToken(token: string): Promise<JWTPayload | null> {
   try {
-    const { payload } = await jwtVerify(token, SECRET);
+    const { payload } = await jwtVerify(token, getSecret());
     return payload as unknown as JWTPayload;
   } catch {
     return null;
