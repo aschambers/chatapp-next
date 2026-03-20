@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import User from '@/lib/models/User';
 import Server from '@/lib/models/Server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const { serverId, userId } = await req.json();
 

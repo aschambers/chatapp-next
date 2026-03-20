@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import User from '@/lib/models/User';
 
+export const dynamic = 'force-dynamic';
+
 export async function PUT(req: NextRequest) {
   const { userId, serverId, active } = await req.json();
   const user = await User.findByPk(userId);

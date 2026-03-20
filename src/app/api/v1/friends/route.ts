@@ -3,6 +3,8 @@ import { Op } from 'sequelize';
 import crypto from 'crypto';
 import Friend from '@/lib/models/Friend';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get('userId');
   if (!userId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

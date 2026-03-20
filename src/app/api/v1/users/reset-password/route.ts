@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import dayjs from 'dayjs';
 import User from '@/lib/models/User';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const { token, password } = await req.json();
   if (!token || !password) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

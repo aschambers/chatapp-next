@@ -3,6 +3,8 @@ import User from '@/lib/models/User';
 import Server from '@/lib/models/Server';
 import { getSessionFromRequest, cookieOptions } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const session = await getSessionFromRequest(req);
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

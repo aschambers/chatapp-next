@@ -4,6 +4,8 @@ import { Resend } from 'resend';
 import User from '@/lib/models/User';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const { email } = await req.json();
   if (!email) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

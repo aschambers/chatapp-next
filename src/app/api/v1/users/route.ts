@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import User from '@/lib/models/User';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const userId = searchParams.get('userId');

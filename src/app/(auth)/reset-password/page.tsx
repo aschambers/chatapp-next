@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
 import { AppDispatch, useAppSelector } from '@/lib/redux/store';
 import { forgotPassword, resetPassword } from '@/lib/redux/modules/users/users';
 import Link from 'next/link';
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const params = useSearchParams();
@@ -98,5 +98,13 @@ export default function ResetPasswordPage() {
         <Link href="/login" className="mt-4 block text-center text-sm text-gray-400 hover:underline">Back to login</Link>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

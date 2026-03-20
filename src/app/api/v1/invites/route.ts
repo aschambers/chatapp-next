@@ -5,6 +5,8 @@ import { Resend } from 'resend';
 import Invite from '@/lib/models/Invite';
 import Server from '@/lib/models/Server';
 import User from '@/lib/models/User';
+
+export const dynamic = 'force-dynamic';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function GET(req: NextRequest) {

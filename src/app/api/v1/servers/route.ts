@@ -5,6 +5,8 @@ import Server from '@/lib/models/Server';
 import Chatroom from '@/lib/models/Chatroom';
 import cloudinary from '@/lib/cloudinary';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const id = searchParams.get('id');

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import User from '@/lib/models/User';
 import cloudinary from '@/lib/cloudinary';
 
+export const dynamic = 'force-dynamic';
+
 export async function PUT(req: NextRequest) {
   const formData = await req.formData();
   const userId = Number(formData.get('userId'));

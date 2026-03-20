@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useDispatch } from 'react-redux';
 import { AppDispatch, useAppSelector } from '@/lib/redux/store';
 import { userVerification, sendEmail } from '@/lib/redux/modules/users/users';
 
-export default function VerificationPage() {
+function VerificationContent() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const params = useSearchParams();
@@ -76,5 +76,13 @@ export default function VerificationPage() {
         {isLoading ? 'Verifying your account…' : 'Loading…'}
       </div>
     </div>
+  );
+}
+
+export default function VerificationPage() {
+  return (
+    <Suspense>
+      <VerificationContent />
+    </Suspense>
   );
 }

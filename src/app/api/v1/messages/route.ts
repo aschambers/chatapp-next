@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Op } from 'sequelize';
 import Message from '@/lib/models/Message';
 
+export const dynamic = 'force-dynamic';
+
 const ORDER: [string, string][] = [['createdAt', 'DESC']];
 
 export async function GET(req: NextRequest) {

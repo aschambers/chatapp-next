@@ -3,6 +3,8 @@ import Server from '@/lib/models/Server';
 import User from '@/lib/models/User';
 import cloudinary from '@/lib/cloudinary';
 
+export const dynamic = 'force-dynamic';
+
 export async function PUT(req: NextRequest) {
   const formData = await req.formData();
   const serverId = Number(formData.get('serverId'));

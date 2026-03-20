@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Server from '@/lib/models/Server';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const { userId, serverId } = await req.json();
   const server = await Server.findByPk(serverId);

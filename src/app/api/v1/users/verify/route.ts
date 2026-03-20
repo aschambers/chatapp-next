@@ -3,6 +3,8 @@ import { Op } from 'sequelize';
 import dayjs from 'dayjs';
 import User from '@/lib/models/User';
 
+export const dynamic = 'force-dynamic';
+
 export async function PUT(req: NextRequest) {
   const { email, token } = await req.json();
 

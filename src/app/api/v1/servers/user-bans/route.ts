@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Server from '@/lib/models/Server';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const serverId = req.nextUrl.searchParams.get('serverId');
   const server = await Server.findByPk(Number(serverId));

@@ -4,6 +4,8 @@ import User from '@/lib/models/User';
 import Server from '@/lib/models/Server';
 import { signToken, cookieOptions, JWTPayload } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
 

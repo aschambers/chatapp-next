@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Op } from 'sequelize';
 import Category from '@/lib/models/Category';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   const serverId = req.nextUrl.searchParams.get('serverId');
   if (!serverId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });

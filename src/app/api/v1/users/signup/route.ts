@@ -5,6 +5,8 @@ import { Resend } from 'resend';
 import User from '@/lib/models/User';
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: NextRequest) {
   try {
     const { username, password, email } = await req.json();

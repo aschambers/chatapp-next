@@ -3,6 +3,8 @@ import { Op } from 'sequelize';
 import Chatroom from '@/lib/models/Chatroom';
 import sequelize from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
+
 async function ensurePositionColumn() {
   await sequelize.query(
     `ALTER TABLE chatrooms ADD COLUMN IF NOT EXISTS position INTEGER DEFAULT 0`
