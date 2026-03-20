@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   await user.update({ token });
 
   const { error } = await resend.emails.send({
-    from: requireEnv('EMAIL_FROM'),
+    from: process.env.EMAIL_FROM ?? '',
     to: email,
     subject: 'Verify your account',
     html: `Please click this link to verify your account. <br><a href="${process.env.NEXT_PUBLIC_BASE_URL}/verification?token=${token}&email=${email}">Verify account</a>`,

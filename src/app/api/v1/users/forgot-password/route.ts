@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   await user.update({ resetPasswordToken: token });
 
   const { error } = await resend.emails.send({
-    from: requireEnv('EMAIL_FROM'),
+    from: process.env.EMAIL_FROM ?? '',
     to: email,
     subject: 'Reset Password',
     html: `Please click this link to reset your password. <br><a href="${process.env.NEXT_PUBLIC_BASE_URL}/reset-password?token=${token}&email=${email}">Reset password</a>`,
