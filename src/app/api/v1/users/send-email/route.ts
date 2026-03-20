@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { Resend } from 'resend';
 import User from '@/lib/models/User';
-import { requireEnv } from '@/lib/env';
-
-const resend = new Resend(requireEnv('RESEND_API_KEY'));
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   const { email } = await req.json();

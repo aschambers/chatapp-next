@@ -5,9 +5,7 @@ import { Resend } from 'resend';
 import Invite from '@/lib/models/Invite';
 import Server from '@/lib/models/Server';
 import User from '@/lib/models/User';
-import { requireEnv } from '@/lib/env';
-
-const resend = new Resend(requireEnv('RESEND_API_KEY'));
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function GET(req: NextRequest) {
   const serverId = req.nextUrl.searchParams.get('serverId');
@@ -29,7 +27,7 @@ export async function POST(req: NextRequest) {
     if (!server) return NextResponse.json({ error: 'Server not found' }, { status: 422 });
 
     await resend.emails.send({
-      from: requireEnv('EMAIL_FROM'),
+      from: process.env.EMAIL_FROM ?? '',
       to: email,
       subject: 'Invitation to join server',
       html: `You have been invited to join <strong>${server.name}</strong>. Use this code: <strong>${code}</strong>`,

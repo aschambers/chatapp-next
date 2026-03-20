@@ -1,13 +1,12 @@
 import { Sequelize } from 'sequelize';
-import { requireEnv } from '@/lib/env';
 
 const sequelize = new Sequelize(
-  requireEnv('DB_NAME'),
-  requireEnv('DB_USER'),
-  requireEnv('DB_PASSWORD'),
+  process.env.DB_NAME ?? '',
+  process.env.DB_USER ?? '',
+  process.env.DB_PASSWORD ?? '',
   {
     dialect: 'postgres',
-    host: requireEnv('DB_HOST'),
+    host: process.env.DB_HOST ?? 'localhost',
     port: 5432,
     pool: { max: 5, min: 0, idle: 30000, acquire: 60000 },
     dialectOptions: {
