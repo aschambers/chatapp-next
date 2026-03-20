@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "socket": "tsx --env-file=.env.local socket-server/index.ts",
+    "build:socket": "tsc --project tsconfig.socket.json",
     "dev:all": "concurrently \"yarn dev\" \"yarn socket\""
   },
   "dependencies": {
