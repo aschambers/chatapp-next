@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { AppDispatch, useAppSelector } from '@/lib/redux/store';
-import { createChatroom, updateChatroom, reorderChatrooms } from '@/lib/redux/modules/chatrooms/chatrooms';
+import { createChatroom, updateChatroom, reorderChatrooms, deleteChatroom } from '@/lib/redux/modules/chatrooms/chatrooms';
 import { categoryCreate } from '@/lib/redux/modules/categories/categories';
 import type { Chatroom, Category } from '@/lib/types';
 import InviteModal from '@/components/InviteModal/InviteModal';
@@ -255,6 +255,8 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
               onDrop={onDropOnChatroom}
               showLineBefore={dropIndicator?.chatroomId === c.id && dropIndicator.before}
               showLineAfter={dropIndicator?.chatroomId === c.id && !dropIndicator.before}
+              isAdmin={isAdmin}
+              onDelete={id => dispatch(deleteChatroom({ chatroomId: id }))}
             />
           ))}
         </div>
@@ -291,6 +293,8 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
                       onDrop={onDropOnChatroom}
                       showLineBefore={dropIndicator?.chatroomId === c.id && dropIndicator.before}
                       showLineAfter={dropIndicator?.chatroomId === c.id && !dropIndicator.before}
+                      isAdmin={isAdmin}
+                      onDelete={id => dispatch(deleteChatroom({ chatroomId: id }))}
                     />
                   ))}
                 </div>
@@ -311,7 +315,7 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
   );
 }
 
-function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDragOver, onDrop, showLineBefore, showLineAfter }: {
+function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDragOver, onDrop, showLineBefore, showLineAfter, isAdmin, onDelete }: {
   chatroom: Chatroom;
   active: boolean;
   onSelect: (c: Chatroom) => void;
@@ -321,9 +325,11 @@ function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDrag
   onDrop: (e: React.DragEvent, c: Chatroom) => void;
   showLineBefore: boolean;
   showLineAfter: boolean;
+  isAdmin: boolean;
+  onDelete: (id: number) => void;
 }) {
   return (
-    <div className="relative">
+    <div className="relative group">
       {showLineBefore && <div className="absolute top-0 left-2 right-2 h-0.5 bg-indigo-400 z-10 rounded" />}
       <div
         draggable
@@ -335,7 +341,16 @@ function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDrag
         className={`flex cursor-pointer items-center gap-1 px-3 py-1 text-sm hover:bg-gray-600 ${active ? 'bg-gray-600 text-white' : 'text-gray-300'}`}
       >
         <span className="text-gray-400">{chatroom.type === 'voice' ? '🔊' : '#'}</span>
-        {chatroom.name}
+        <span className="flex-1">{chatroom.name}</span>
+        {isAdmin && (
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(chatroom.id); }}
+            className="hidden group-hover:block text-gray-400 hover:text-red-400 px-1"
+            title="Delete channel"
+          >
+            ✕
+          </button>
+        )}
       </div>
       {showLineAfter && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-indigo-400 z-10 rounded" />}
     </div>

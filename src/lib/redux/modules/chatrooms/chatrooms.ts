@@ -51,7 +51,7 @@ const chatroomSlice = createSlice({
     builder.addCase(createChatroom.rejected, s => { s.isLoading = false; s.error = true; });
 
     builder.addCase(getChatrooms.fulfilled, (s, a) => { s.chatrooms = a.payload; });
-    builder.addCase(deleteChatroom.fulfilled, s => { s.success = true; });
+    builder.addCase(deleteChatroom.fulfilled, (s, a) => { s.success = true; s.chatrooms = s.chatrooms.filter(c => c.id !== a.meta.arg.chatroomId); });
     builder.addCase(updateChatroom.fulfilled, (s, a) => {
       s.updateChatroomSuccess = true;
       const idx = s.chatrooms.findIndex(c => c.id === a.payload.id);

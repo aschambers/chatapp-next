@@ -35,14 +35,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { name, serverId } = await req.json();
+  const { name, serverId, type } = await req.json();
   if (!name || !serverId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 
   const existing = await Chatroom.findOne({ where: { [Op.and]: [{ serverId }, { name }] } });
   if (existing) return NextResponse.json({ error: 'Chatroom exists' }, { status: 422 });
 
   const count = await Chatroom.count({ where: { serverId } });
-  await Chatroom.create({ name, serverId, type: 'text', categoryId: null, position: count });
+  await Chatroom.create({ name, serverId, type: type ?? 'text', categoryId: null, position: count });
   const all = await Chatroom.findAll({ where: { serverId } });
   return NextResponse.json(sortByPosition(all));
 }
