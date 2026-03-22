@@ -5,10 +5,9 @@ import sequelize from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-async function ensurePositionColumn() {
-  await sequelize.query(
-    `ALTER TABLE chatrooms ADD COLUMN IF NOT EXISTS position INTEGER DEFAULT 0`
-  );
+async function ensureColumns() {
+  await sequelize.query(`ALTER TABLE chatrooms ADD COLUMN IF NOT EXISTS position INTEGER DEFAULT 0`);
+  await sequelize.query(`ALTER TABLE chatrooms ADD COLUMN IF NOT EXISTS slowmode INTEGER DEFAULT 0`);
 }
 
 function sortByPosition(chatrooms: Chatroom[]) {
@@ -26,7 +25,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(sortByPosition(chatrooms));
   } catch (e: any) {
     if (e?.original?.code === '42703') {
-      await ensurePositionColumn();
+      await ensureColumns();
       const chatrooms = await Chatroom.findAll({ where: { serverId: Number(serverId) } });
       return NextResponse.json(sortByPosition(chatrooms));
     }
@@ -37,6 +36,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const { name, serverId, type } = await req.json();
   if (!name || !serverId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (name.length > 24) return NextResponse.json({ error: 'Channel name too long' }, { status: 400 });
 
   const existing = await Chatroom.findOne({ where: { [Op.and]: [{ serverId }, { name }] } });
   if (existing) return NextResponse.json({ error: 'Chatroom exists' }, { status: 422 });
@@ -55,13 +55,17 @@ export async function DELETE(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const { chatroomId, categoryId } = await req.json();
+  const { chatroomId, categoryId, slowmode } = await req.json();
   if (!chatroomId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 
   const chatroom = await Chatroom.findByPk(chatroomId);
   if (!chatroom) return NextResponse.json({ error: 'Chatroom not found' }, { status: 422 });
 
-  await chatroom.update({ categoryId });
+  const updates: Record<string, unknown> = {};
+  if (categoryId !== undefined) updates.categoryId = categoryId;
+  if (slowmode !== undefined) updates.slowmode = slowmode;
+
+  await chatroom.update(updates);
   return NextResponse.json(chatroom);
 }
 

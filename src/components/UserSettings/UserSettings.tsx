@@ -133,8 +133,8 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-md rounded-lg bg-gray-800 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0" onClick={onClose}>
+      <div className="w-full max-w-md rounded-lg bg-gray-800 shadow-xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-700 px-6 py-4">
           <h2 className="text-lg font-bold text-white">User Settings</h2>
@@ -184,7 +184,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                   <input
                     type="text"
                     value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    onChange={e => { if (e.target.value.length <= 30) setUsername(e.target.value); }}
                     className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
@@ -347,6 +347,11 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
               </div>
             </>
           )}
+        </div>
+        <div className="border-t border-gray-700 py-3 text-center text-xs text-gray-500">
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300">Terms of Service</a>
+          {' '}·{' '}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300">Privacy Policy</a>
         </div>
       </div>
     </div>

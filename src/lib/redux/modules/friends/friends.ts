@@ -31,9 +31,17 @@ const friendSlice = createSlice({
   initialState,
   reducers: { resetFriendValues: () => initialState },
   extraReducers: builder => {
+    builder.addCase(friendCreate.pending, s => { s.error = false; });
     builder.addCase(friendCreate.fulfilled, (s, a) => { s.friends = a.payload; s.success = true; });
+    builder.addCase(friendCreate.rejected, s => { s.error = true; });
+
+    builder.addCase(friendDelete.pending, s => { s.error = false; });
     builder.addCase(friendDelete.fulfilled, (s, a) => { s.friends = a.payload; });
+    builder.addCase(friendDelete.rejected, s => { s.error = true; });
+
+    builder.addCase(findFriends.pending, s => { s.error = false; });
     builder.addCase(findFriends.fulfilled, (s, a) => { s.friends = a.payload; });
+    builder.addCase(findFriends.rejected, s => { s.error = true; });
   },
 });
 

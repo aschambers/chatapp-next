@@ -28,7 +28,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
-      initialUser={session}
+      initialUser={{ ...session, imageUrl: user?.imageUrl ?? null }}
       initialServers={initialServers}
       initialActiveServer={initialActiveServer}
       initialPendingChatroomId={initialPendingChatroomId}

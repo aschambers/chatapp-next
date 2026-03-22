@@ -41,7 +41,7 @@ export default function SignupPage() {
             <input
               type="text"
               value={username}
-              onChange={e => setUsername(e.target.value)}
+              onChange={e => { if (e.target.value.length <= 30) setUsername(e.target.value); }}
               required
               className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -78,6 +78,12 @@ export default function SignupPage() {
         <p className="mt-4 text-center text-sm text-gray-400">
           Already have an account?{' '}
           <Link href="/login" className="text-indigo-400 hover:underline">Sign in</Link>
+        </p>
+        <p className="mt-3 text-center text-xs text-gray-500">
+          By signing up you agree to our{' '}
+          <Link href="/terms" className="hover:underline">Terms of Service</Link>
+          {' '}and{' '}
+          <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
         </p>
       </div>
     </div>

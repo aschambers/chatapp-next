@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Op } from 'sequelize';
+import sequelize from '@/lib/db';
 import Message from '@/lib/models/Message';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,26 @@ export async function GET(req: NextRequest) {
   const userId = searchParams.get('userId');
   const friendId = searchParams.get('friendId');
   const personal = searchParams.get('personal');
+  const lastActivity = searchParams.get('lastActivity');
+
+  if (lastActivity === 'true' && userId) {
+    const uid = Number(userId);
+    const rows = await Message.findAll({
+      attributes: ['friendId', 'userId', [sequelize.fn('MAX', sequelize.col('createdAt')), 'lastAt']],
+      where: { chatroomId: null, [Op.or]: [{ userId: uid }, { friendId: uid }] },
+      group: ['friendId', 'userId'],
+      raw: true,
+    }) as unknown as { friendId: number; userId: number; lastAt: string }[];
+
+    const result: Record<number, string> = {};
+    for (const row of rows) {
+      const otherId = row.userId === uid ? row.friendId : row.userId;
+      if (!result[otherId] || new Date(row.lastAt) > new Date(result[otherId])) {
+        result[otherId] = row.lastAt;
+      }
+    }
+    return NextResponse.json(result);
+  }
 
   if (chatroomId) {
     const messages = await Message.findAll({ where: { chatroomId: Number(chatroomId) }, order: ORDER });

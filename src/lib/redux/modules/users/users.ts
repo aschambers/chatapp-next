@@ -109,13 +109,25 @@ const userSlice = createSlice({
       else s.error = true;
     });
     // logout
+    builder.addCase(userLogout.pending, s => { s.error = false; });
     builder.addCase(userLogout.fulfilled, s => { s.user = null; });
+    builder.addCase(userLogout.rejected, s => { s.error = true; });
     // getUsers
+    builder.addCase(getUsers.pending, s => { s.error = false; });
     builder.addCase(getUsers.fulfilled, (s, a) => { s.users = a.payload; });
+    builder.addCase(getUsers.rejected, s => { s.error = true; });
     // getSingle
+    builder.addCase(getSingleUser.pending, s => { s.error = false; });
     builder.addCase(getSingleUser.fulfilled, (s, a) => { s.user = a.payload; });
+    builder.addCase(getSingleUser.rejected, s => { s.error = true; });
     // update
+    builder.addCase(userUpdate.pending, s => { s.error = false; });
     builder.addCase(userUpdate.fulfilled, (s, a) => { s.user = a.payload; });
+    builder.addCase(userUpdate.rejected, s => { s.error = true; });
+    // delete
+    builder.addCase(deleteUser.pending, s => { s.error = false; });
+    builder.addCase(deleteUser.fulfilled, s => { s.user = null; });
+    builder.addCase(deleteUser.rejected, s => { s.error = true; });
     // verify
     builder.addCase(userVerification.pending, s => { s.isLoading = true; s.error = false; s.success = false; s.already = false; });
     builder.addCase(userVerification.fulfilled, (s, a) => {

@@ -50,15 +50,25 @@ const chatroomSlice = createSlice({
     builder.addCase(createChatroom.fulfilled, (s, a) => { s.isLoading = false; s.success = true; s.chatrooms = a.payload; });
     builder.addCase(createChatroom.rejected, s => { s.isLoading = false; s.error = true; });
 
+    builder.addCase(getChatrooms.pending, s => { s.error = false; });
     builder.addCase(getChatrooms.fulfilled, (s, a) => { s.chatrooms = a.payload; });
+    builder.addCase(getChatrooms.rejected, s => { s.error = true; });
+
+    builder.addCase(deleteChatroom.pending, s => { s.error = false; });
     builder.addCase(deleteChatroom.fulfilled, (s, a) => { s.success = true; s.chatrooms = s.chatrooms.filter(c => c.id !== a.meta.arg.chatroomId); });
+    builder.addCase(deleteChatroom.rejected, s => { s.error = true; });
+
+    builder.addCase(updateChatroom.pending, s => { s.error = false; });
     builder.addCase(updateChatroom.fulfilled, (s, a) => {
       s.updateChatroomSuccess = true;
       const idx = s.chatrooms.findIndex(c => c.id === a.payload.id);
       if (idx !== -1) s.chatrooms[idx] = a.payload;
     });
+    builder.addCase(updateChatroom.rejected, s => { s.error = true; });
 
+    builder.addCase(reorderChatrooms.pending, s => { s.error = false; });
     builder.addCase(reorderChatrooms.fulfilled, (s, a) => { s.chatrooms = a.payload; });
+    builder.addCase(reorderChatrooms.rejected, s => { s.error = true; });
   },
 });
 

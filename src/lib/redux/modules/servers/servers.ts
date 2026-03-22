@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import type { Server, ServerUser } from '@/lib/types';
+import { inviteVerification } from '@/lib/redux/modules/invites/invites';
 
 export interface ServerInfo {
   id: number;
@@ -105,17 +106,51 @@ const serverSlice = createSlice({
     builder.addCase(createServer.fulfilled, (s, a) => { s.isLoading = false; s.servers = a.payload; });
     builder.addCase(createServer.rejected, s => { s.isLoading = false; s.error = true; });
 
+    builder.addCase(findServer.pending, s => { s.error = false; });
     builder.addCase(findServer.fulfilled, (s, a) => { s.servers = a.payload; });
+    builder.addCase(findServer.rejected, s => { s.error = true; });
+
+    builder.addCase(findUserList.pending, s => { s.error = false; });
     builder.addCase(findUserList.fulfilled, (s, a) => { s.serverUserList = a.payload; });
+    builder.addCase(findUserList.rejected, s => { s.error = true; });
+
+    builder.addCase(findUserBans.pending, s => { s.error = false; });
     builder.addCase(findUserBans.fulfilled, (s, a) => { s.serverUserBans = a.payload; s.findBansSuccess = true; });
+    builder.addCase(findUserBans.rejected, s => { s.error = true; });
+
+    builder.addCase(unbanUser.pending, s => { s.error = false; });
     builder.addCase(unbanUser.fulfilled, (s, a) => { s.serverUserBans = a.payload; s.unbanUserSuccess = true; });
+    builder.addCase(unbanUser.rejected, s => { s.error = true; });
+
+    builder.addCase(deleteServer.pending, s => { s.error = false; });
     builder.addCase(deleteServer.fulfilled, s => { s.servers = []; });
+    builder.addCase(deleteServer.rejected, s => { s.error = true; });
+
+    builder.addCase(updateUserRole.pending, s => { s.error = false; });
     builder.addCase(updateUserRole.fulfilled, (s, a) => { s.serverUserList = a.payload; });
+    builder.addCase(updateUserRole.rejected, s => { s.error = true; });
+
+    builder.addCase(kickServerUser.pending, s => { s.error = false; });
     builder.addCase(kickServerUser.fulfilled, (s, a) => { s.serverUserList = a.payload; });
+    builder.addCase(kickServerUser.rejected, s => { s.error = true; });
+
+    builder.addCase(banServerUser.pending, s => { s.error = false; });
     builder.addCase(banServerUser.fulfilled, (s, a) => { s.serverUserList = a.payload; });
+    builder.addCase(banServerUser.rejected, s => { s.error = true; });
+
+    builder.addCase(serverToggle.pending, s => { s.error = false; });
     builder.addCase(serverToggle.fulfilled, (s, a) => { s.servers = a.payload; });
+    builder.addCase(serverToggle.rejected, s => { s.error = true; });
+
+    builder.addCase(fetchServerInfo.pending, s => { s.error = false; });
     builder.addCase(fetchServerInfo.fulfilled, (s, a) => { s.serverInfo = a.payload; });
+    builder.addCase(fetchServerInfo.rejected, s => { s.error = true; });
+
+    builder.addCase(updateServer.pending, s => { s.error = false; });
     builder.addCase(updateServer.fulfilled, (s, a) => { s.serverInfo = a.payload; });
+    builder.addCase(updateServer.rejected, s => { s.error = true; });
+
+    builder.addCase(inviteVerification.fulfilled, (s, a) => { s.servers = a.payload; });
   },
 });
 

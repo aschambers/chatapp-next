@@ -55,7 +55,7 @@ export default function CreateServer({ userId, onClose, onSuccess }: Props) {
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0"
     >
       <div className="w-full max-w-md rounded-lg bg-gray-800 p-6 shadow-xl">
         <h1 className="mb-2 text-xl font-bold text-white">Create your server</h1>
@@ -69,7 +69,7 @@ export default function CreateServer({ userId, onClose, onSuccess }: Props) {
             type="text"
             placeholder="Enter a server name"
             value={name}
-            onChange={e => setName(e.target.value)}
+            onChange={e => { if (e.target.value.length <= 30) setName(e.target.value); }}
             className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-indigo-500"
           />
         </div>

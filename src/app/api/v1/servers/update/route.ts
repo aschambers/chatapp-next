@@ -15,6 +15,7 @@ export async function PUT(req: NextRequest) {
   const imageFile = formData.get('imageUrl') as File | null;
 
   if (!serverId || !userId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (name && name.length > 30) return NextResponse.json({ error: 'Server name too long' }, { status: 400 });
 
   const server = await Server.findByPk(serverId);
   if (!server) return NextResponse.json({ error: 'Server not found' }, { status: 404 });

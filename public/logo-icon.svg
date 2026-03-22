@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 48 48" width="20" height="20">
+  <!-- Back bubble -->
+  <path d="M8 2 Q6 2 6 4 L6 16 Q6 18 8 18 L10 18 L10 22 L15 18 L24 18 Q26 18 26 16 L26 4 Q26 2 24 2 Z"
+    fill="rgba(255,255,255,0.35)"/>
+  <!-- Front bubble -->
+  <path d="M2 8 Q2 6 4 6 L20 6 Q22 6 22 8 L22 20 Q22 22 20 22 L12 22 L7 27 L7 22 L4 22 Q2 22 2 20 Z"
+    fill="#ffffff"/>
+</svg>

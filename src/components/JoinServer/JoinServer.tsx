@@ -34,7 +34,7 @@ export default function JoinServer({ userId, email, onClose, onSuccess }: Props)
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0"
     >
       <div className="w-full max-w-md rounded-lg bg-gray-800 p-6 shadow-xl">
         <h1 className="mb-2 text-xl font-bold text-white">Join a server</h1>

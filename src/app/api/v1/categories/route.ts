@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
   if (!name || !serverId || !order || visible === undefined) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
+  if (name.length > 24) return NextResponse.json({ error: 'Category name too long' }, { status: 400 });
 
   const existing = await Category.findOne({ where: { [Op.and]: [{ serverId }, { name }] } });
   if (existing) return NextResponse.json({ error: 'Category exists' }, { status: 422 });

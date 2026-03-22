@@ -71,6 +71,11 @@ export default function LoginPage() {
         <p className="mt-2 text-center text-sm">
           <Link href="/reset-password" className="text-gray-400 hover:underline text-xs">Forgot password?</Link>
         </p>
+        <p className="mt-3 text-center text-xs text-gray-500">
+          <Link href="/terms" className="hover:underline">Terms of Service</Link>
+          {' '}·{' '}
+          <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+        </p>
       </div>
     </div>
   );

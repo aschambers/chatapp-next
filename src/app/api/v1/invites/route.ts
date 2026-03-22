@@ -81,7 +81,7 @@ export async function PUT(req: NextRequest) {
   if (!server.userList) server.userList = [];
   const uList = server.userList as Record<string, unknown>[];
   if (!uList.some(u => u.userId === user.id)) {
-    uList.push({ userId: user.id, username: user.username, imageUrl: user.imageUrl, type: 'user', active: true });
+    uList.push({ userId: user.id, username: user.username, imageUrl: user.imageUrl, type: 'user', active: true, joinedAt: new Date().toISOString() });
     server.changed('userList', true);
     await server.save();
   }

@@ -13,6 +13,7 @@ export interface ServerUser {
   type: 'owner' | 'admin' | 'moderator' | 'voice' | 'user';
   imageUrl?: string;
   active?: boolean;
+  joinedAt?: string;
 }
 
 export interface Chatroom {
@@ -22,6 +23,7 @@ export interface Chatroom {
   serverId: number;
   categoryId?: number;
   position?: number | null;
+  slowmode?: number;
 }
 
 export interface Friend {

@@ -4,11 +4,11 @@ import { Op } from 'sequelize';
 import sequelize from '../src/lib/db';
 import Message from '../src/lib/models/Message';
 import ServerModel from '../src/lib/models/Server';
+import Chatroom from '../src/lib/models/Chatroom';
 
 // Bootstrap models
 import '../src/lib/models/User';
 import '../src/lib/models/Friend';
-import '../src/lib/models/Chatroom';
 import '../src/lib/models/Category';
 import '../src/lib/models/Invite';
 
@@ -40,10 +40,12 @@ interface ServerData {
   room: string;
 }
 
+type UserStatus = 'online' | 'away' | 'busy' | 'offline';
+
 interface UserPresence {
   userId: number;
   username: string;
-  active: boolean;
+  status: UserStatus;
 }
 
 const PORT = Number(process.env.PORT ?? process.env.SOCKET_PORT ?? 3001);
@@ -60,6 +62,9 @@ let users: UserPresence[] = [];
 
 // Voice channel participants: chatroomId -> { username, socketId, room }[]
 const voiceChannels = new Map<number, { username: string; socketId: string; room: string }[]>();
+
+// Slowmode: last message timestamp per userId:chatroomId
+const slowmodeTimestamps = new Map<string, number>();
 
 sequelize.sync().then(() => {
   console.log('Socket server DB synced');
@@ -82,9 +87,26 @@ sequelize.sync().then(() => {
         const server = await ServerModel.findByPk(data.serverId);
         if (server) io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
       }
+
+      // Send current presence data directly to the joining socket
+      socket.emit('RECEIVE_USERS', users);
     });
 
     socket.on('CHATROOM_MESSAGE', async (data: ChatroomMsgData) => {
+      const chatroom = await Chatroom.findByPk(data.chatroomId);
+      const slowmode = chatroom?.slowmode ?? 0;
+
+      if (slowmode > 0) {
+        const key = `${data.userId}:${data.chatroomId}`;
+        const last = slowmodeTimestamps.get(key) ?? 0;
+        const remaining = Math.ceil(slowmode - (Date.now() - last) / 1000);
+        if (remaining > 0) {
+          socket.emit('SLOWMODE_ERROR', { remaining });
+          return;
+        }
+        slowmodeTimestamps.set(key, Date.now());
+      }
+
       await Message.create({
         username: data.username,
         message: data.message,
@@ -264,24 +286,31 @@ sequelize.sync().then(() => {
     });
 
     // ── Online user presence ──────────────────────────────────────────────
-    socket.on('SEND_USER', (data: UserPresence) => {
+    socket.on('SEND_USER', (data: { userId: number; username: string; status?: UserStatus; active?: boolean }) => {
+      const status: UserStatus = data.status ?? (data.active ? 'online' : 'offline');
       const existing = users.find(u => u.username === data.username);
       if (!existing) {
-        users.push(data);
+        users.push({ userId: data.userId, username: data.username, status });
       } else {
-        existing.active = true;
+        existing.status = status;
       }
+      io.emit('RECEIVE_USERS', users);
+    });
+
+    socket.on('SET_STATUS', (data: { username: string; status: UserStatus }) => {
+      const user = users.find(u => u.username === data.username);
+      if (user) user.status = data.status;
       io.emit('RECEIVE_USERS', users);
     });
 
     socket.on('LOGOUT_USER', (data: { username: string }) => {
       const user = users.find(u => u.username === data.username);
-      if (user) user.active = false;
+      if (user) user.status = 'offline';
       io.emit('RECEIVE_USERS', users);
     });
 
     socket.on('GET_USERS', () => {
-      io.emit('RECEIVE_USERS', users);
+      socket.emit('RECEIVE_USERS', users);
     });
   });
 

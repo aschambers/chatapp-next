@@ -27,8 +27,13 @@ const categorySlice = createSlice({
   initialState,
   reducers: { resetCategoryValues: () => initialState },
   extraReducers: builder => {
+    builder.addCase(categoryCreate.pending, s => { s.error = false; });
     builder.addCase(categoryCreate.fulfilled, (s, a) => { s.categories = a.payload; s.success = true; });
+    builder.addCase(categoryCreate.rejected, s => { s.error = true; });
+
+    builder.addCase(categoryFindAll.pending, s => { s.error = false; });
     builder.addCase(categoryFindAll.fulfilled, (s, a) => { s.categories = a.payload; });
+    builder.addCase(categoryFindAll.rejected, s => { s.error = true; });
   },
 });
 

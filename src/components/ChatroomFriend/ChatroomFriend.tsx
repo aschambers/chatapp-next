@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import axios from 'axios';
 import dayjs from 'dayjs';
 import { getSocket } from '@/lib/socket';
+import UserProfileModal from '@/components/UserProfileModal/UserProfileModal';
 
 interface Message {
   id: number;
@@ -17,8 +19,10 @@ interface Message {
 interface Props {
   userId: number;
   username: string;
+  currentUserImageUrl?: string | null;
   friendId: number | null;
   groupId: string;
+  onEditProfile?: () => void;
 }
 
 function friendRoom(groupId: string) {
@@ -26,7 +30,7 @@ function friendRoom(groupId: string) {
   return `${base}/friends/${groupId}`;
 }
 
-export default function ChatroomFriend({ userId, username, friendId, groupId }: Props) {
+export default function ChatroomFriend({ userId, username, currentUserImageUrl, friendId, groupId, onEditProfile }: Props) {
   const socket = getSocket();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -37,6 +41,8 @@ export default function ChatroomFriend({ userId, username, friendId, groupId }: 
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [profileTarget, setProfileTarget] = useState<{ userId: number; username: string } | null>(null);
+  const [friendImageUrl, setFriendImageUrl] = useState<string | null>(null);
 
   const socketIdRef = useRef<string>('');
   const prevGroupIdRef = useRef<string>(groupId);
@@ -45,6 +51,15 @@ export default function ChatroomFriend({ userId, username, friendId, groupId }: 
 
   const effectiveFriendId = friendId ?? userId;
   const isPersonal = effectiveFriendId === userId;
+
+  // Fetch friend's avatar
+  useEffect(() => {
+    if (!isPersonal && friendId) {
+      axios.get(`/api/v1/users?userId=${friendId}`)
+        .then(r => setFriendImageUrl(r.data?.imageUrl ?? null))
+        .catch(() => {});
+    }
+  }, [friendId, isPersonal]);
 
   // Close menus on outside click
   useEffect(() => {
@@ -186,79 +201,101 @@ export default function ChatroomFriend({ userId, username, friendId, groupId }: 
         <div className="flex min-h-full flex-col justify-end p-4">
         {messages.map((item, index) => {
           const msgKey = `message${index}`;
+          const isSelf = item.userId === userId;
+          const senderImage = isSelf ? (currentUserImageUrl ?? null) : friendImageUrl;
           return (
             <div
               key={index}
               id={msgKey}
               className="mb-2"
               onMouseEnter={() => {
-                if (!editingMessage && !messageMenu && userId === item.userId) {
+                if (!editingMessage && !messageMenu && isSelf) {
                   setHover(msgKey);
                 }
               }}
               onMouseLeave={() => setHover('')}
             >
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-indigo-400">{item.username}</span>
-                <span className="text-xs text-gray-400">
-                  {dayjs(item.updatedAt).format('MM/DD/YYYY')}
-                </span>
-                {hover === msgKey && (
-                  <button
-                    className="ml-auto text-gray-400 hover:text-white"
-                    onClick={() => {
-                      setEditMessage(item);
-                      setMessageMenu(true);
-                    }}
-                  >
-                    ✎
-                  </button>
-                )}
-              </div>
-
-              {/* Message menu */}
-              {messageMenu && editMessage?.id === item.id && (
+              <div className="flex gap-3">
+                {/* Avatar */}
                 <div
-                  ref={menuRef}
-                  className="mt-1 flex gap-3 rounded bg-gray-700 p-2 text-sm"
+                  className="flex-shrink-0 mt-1 h-9 w-9 rounded-full bg-indigo-600 overflow-hidden flex items-center justify-center text-sm font-bold cursor-pointer"
+                  onClick={() => setProfileTarget({ userId: item.userId, username: item.username })}
                 >
-                  <button onClick={() => { setMessageMenu(false); setEditMessage(null); }}>✕</button>
-                  <button
-                    className="hover:text-yellow-400"
-                    onClick={() => {
-                      setEditingMessage(editMessage);
-                      setNewMessage(editMessage.message);
-                      setHover('');
-                      setEditMessage(null);
-                      setMessageMenu(false);
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button className="hover:text-red-400" onClick={deleteUserMessage}>
-                    Delete
-                  </button>
+                  {senderImage
+                    ? <img src={senderImage} alt={item.username} className="h-full w-full object-cover" />
+                    : item.username[0]?.toUpperCase()
+                  }
                 </div>
-              )}
 
-              {/* Message body or edit input */}
-              {editingMessage?.id === item.id ? (
-                <div>
-                  <input
-                    className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm"
-                    value={newMessage}
-                    onChange={e => {
-                      if (e.target.value.length < 500) setNewMessage(e.target.value);
-                    }}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' && !e.shiftKey) sendEditedMessage();
-                    }}
-                  />
-                  <p className="text-xs text-gray-400">escape to cancel • enter to save</p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="font-semibold text-indigo-400 cursor-pointer hover:underline"
+                      onClick={() => setProfileTarget({ userId: item.userId, username: item.username })}
+                    >
+                      {item.username}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {dayjs(item.updatedAt).format('MM/DD/YYYY')}
+                    </span>
+                    {hover === msgKey && (
+                      <button
+                        className="ml-auto text-gray-400 hover:text-white"
+                        onClick={() => {
+                          setEditMessage(item);
+                          setMessageMenu(true);
+                        }}
+                      >
+                        ✎
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Message menu */}
+                  {messageMenu && editMessage?.id === item.id && (
+                    <div
+                      ref={menuRef}
+                      className="mt-1 flex gap-3 rounded bg-gray-700 p-2 text-sm"
+                    >
+                      <button onClick={() => { setMessageMenu(false); setEditMessage(null); }}>✕</button>
+                      <button
+                        className="hover:text-yellow-400"
+                        onClick={() => {
+                          setEditingMessage(editMessage);
+                          setNewMessage(editMessage.message);
+                          setHover('');
+                          setEditMessage(null);
+                          setMessageMenu(false);
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button className="hover:text-red-400" onClick={deleteUserMessage}>
+                        Delete
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Message body or edit input */}
+                  {editingMessage?.id === item.id ? (
+                    <div>
+                      <input
+                        className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm"
+                        value={newMessage}
+                        onChange={e => {
+                          if (e.target.value.length < 500) setNewMessage(e.target.value);
+                        }}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && !e.shiftKey) sendEditedMessage();
+                        }}
+                      />
+                      <p className="text-xs text-gray-400">escape to cancel • enter to save</p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-200">{item.message}</p>
+                  )}
                 </div>
-              ) : (
-                <p className="text-sm text-gray-200">{item.message}</p>
-              )}
+              </div>
             </div>
           );
         })}
@@ -292,6 +329,15 @@ export default function ChatroomFriend({ userId, username, friendId, groupId }: 
           😊
         </button>
       </div>
+      {profileTarget && (
+        <UserProfileModal
+          userId={profileTarget.userId}
+          username={profileTarget.username}
+          isSelf={Number(profileTarget.userId) === Number(userId)}
+          onClose={() => setProfileTarget(null)}
+          onEditProfile={onEditProfile}
+        />
+      )}
     </div>
   );
 }

@@ -41,11 +41,25 @@ const inviteSlice = createSlice({
   initialState,
   reducers: { resetInviteValues: () => initialState },
   extraReducers: builder => {
-    builder.addCase(inviteCreate.fulfilled, (s, a) => { s.success = true; });
+    builder.addCase(inviteCreate.pending, s => { s.error = false; });
+    builder.addCase(inviteCreate.fulfilled, s => { s.success = true; });
+    builder.addCase(inviteCreate.rejected, s => { s.error = true; });
+
+    builder.addCase(inviteEmailCreate.pending, s => { s.error = false; });
     builder.addCase(inviteEmailCreate.fulfilled, s => { s.success = true; });
-    builder.addCase(inviteVerification.fulfilled, (s, a) => { s.success = true; });
+    builder.addCase(inviteEmailCreate.rejected, s => { s.error = true; });
+
+    builder.addCase(inviteVerification.pending, s => { s.error = false; });
+    builder.addCase(inviteVerification.fulfilled, s => { s.success = true; });
+    builder.addCase(inviteVerification.rejected, s => { s.error = true; });
+
+    builder.addCase(findInvites.pending, s => { s.error = false; });
     builder.addCase(findInvites.fulfilled, (s, a) => { s.invites = a.payload; });
+    builder.addCase(findInvites.rejected, s => { s.error = true; });
+
+    builder.addCase(deleteInvite.pending, s => { s.error = false; });
     builder.addCase(deleteInvite.fulfilled, (s, a) => { s.invites = a.payload; });
+    builder.addCase(deleteInvite.rejected, s => { s.error = true; });
   },
 });
 

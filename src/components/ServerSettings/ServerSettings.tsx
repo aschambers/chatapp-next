@@ -30,7 +30,6 @@ interface Props {
 type Tab = 'overview' | 'members' | 'bans' | 'invites';
 
 const ROLES = ['owner', 'admin', 'moderator', 'voice', 'user'] as const;
-const REGIONS = ['US West', 'US East', 'Europe', 'Asia', 'South America', 'Australia'];
 
 export default function ServerSettings({
   serverId,
@@ -51,7 +50,6 @@ export default function ServerSettings({
   // Overview edit state
   const fileRef = useRef<HTMLInputElement>(null);
   const [editName, setEditName] = useState(serverName);
-  const [editRegion, setEditRegion] = useState('');
   const [editPublic, setEditPublic] = useState(false);
   const [imagePreview, setImagePreview] = useState<string>('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -69,7 +67,6 @@ export default function ServerSettings({
   useEffect(() => {
     if (serverInfo) {
       setEditName(serverInfo.name);
-      setEditRegion(serverInfo.region ?? '');
       setEditPublic(serverInfo.public ?? false);
       setImagePreview(serverInfo.imageUrl ?? '');
     }
@@ -115,7 +112,6 @@ export default function ServerSettings({
     formData.append('serverId', String(serverId));
     formData.append('userId', String(userId));
     formData.append('name', editName.trim());
-    formData.append('region', editRegion);
     formData.append('public', String(editPublic));
     if (imageFile) formData.append('imageUrl', imageFile);
 
@@ -137,8 +133,8 @@ export default function ServerSettings({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-black/60">
-      <div className="ml-auto flex h-full w-full max-w-lg flex-col bg-gray-800 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0">
+      <div className="flex w-full max-w-lg flex-col bg-gray-800 shadow-xl rounded-lg max-h-[90vh]">
 
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-600 px-6 py-4">
@@ -194,26 +190,11 @@ export default function ServerSettings({
                     <input
                       type="text"
                       value={editName}
-                      onChange={e => setEditName(e.target.value)}
+                      onChange={e => { if (e.target.value.length <= 30) setEditName(e.target.value); }}
                       className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   ) : (
                     <p className="rounded bg-gray-700 px-3 py-2 text-sm text-white">{serverInfo?.name ?? serverName}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="mb-1 block text-xs text-gray-400">Region</label>
-                  {isOwner ? (
-                    <select
-                      value={editRegion}
-                      onChange={e => setEditRegion(e.target.value)}
-                      className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
-                  ) : (
-                    <p className="rounded bg-gray-700 px-3 py-2 text-sm text-white">{serverInfo?.region ?? '—'}</p>
                   )}
                 </div>
 

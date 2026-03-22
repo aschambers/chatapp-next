@@ -36,6 +36,7 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
   const [channelType, setChannelType] = useState<'text' | 'voice'>('text');
   const [categoryName, setCategoryName] = useState('');
   const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
   const draggedChatroom = useRef<Chatroom | null>(null);
 
@@ -59,6 +60,10 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
     setChannelName('');
     setChannelType('text');
     setShowCreateChannel(false);
+  };
+
+  const handleSlowmode = (chatroomId: number, seconds: number) => {
+    dispatch(updateChatroom({ chatroomId, slowmode: seconds }));
   };
 
   const handleCreateCategory = async () => {
@@ -140,19 +145,18 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
   return (
     <div className="flex flex-col h-full">
       {/* Server header */}
-      <div className="relative border-b border-gray-600 px-4 py-3">
-        <div className="flex items-center justify-between">
+      <div className="relative border-b border-gray-600 px-4 py-3" onMouseDown={e => e.stopPropagation()} onTouchStart={e => e.stopPropagation()}>
+        <div
+          className="flex items-center gap-1 cursor-pointer"
+          onClick={() => setShowMenu(v => !v)}
+        >
           <p className="truncate text-sm font-bold">{serverName}</p>
           {isAdmin && (
-            <button
-              onClick={() => setShowMenu(v => !v)}
-              className="text-gray-400 hover:text-white"
-              title="Server options"
-            >
+            <span className="text-gray-400 hover:text-white">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                 <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-            </button>
+            </span>
           )}
         </div>
 
@@ -256,7 +260,8 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
               showLineBefore={dropIndicator?.chatroomId === c.id && dropIndicator.before}
               showLineAfter={dropIndicator?.chatroomId === c.id && !dropIndicator.before}
               isAdmin={isAdmin}
-              onDelete={id => dispatch(deleteChatroom({ chatroomId: id }))}
+              onDelete={id => setConfirmDeleteId(id)}
+              onSlowmode={handleSlowmode}
             />
           ))}
         </div>
@@ -294,7 +299,8 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
                       showLineBefore={dropIndicator?.chatroomId === c.id && dropIndicator.before}
                       showLineAfter={dropIndicator?.chatroomId === c.id && !dropIndicator.before}
                       isAdmin={isAdmin}
-                      onDelete={id => dispatch(deleteChatroom({ chatroomId: id }))}
+                      onDelete={id => setConfirmDeleteId(id)}
+              onSlowmode={handleSlowmode}
                     />
                   ))}
                 </div>
@@ -303,6 +309,30 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
           );
         })}
       </div>
+
+      {/* Delete confirmation modal */}
+      {confirmDeleteId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0">
+          <div className="w-72 rounded-lg bg-gray-800 p-5 shadow-xl">
+            <h3 className="mb-2 text-base font-bold text-white">Delete Channel</h3>
+            <p className="mb-5 text-sm text-gray-300">Are you sure you want to delete this channel? This cannot be undone.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="flex-1 rounded bg-gray-600 py-2 text-sm text-gray-200 hover:bg-gray-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { dispatch(deleteChatroom({ chatroomId: confirmDeleteId })); setConfirmDeleteId(null); }}
+                className="flex-1 rounded bg-red-600 py-2 text-sm text-white hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Invite modal */}
       {showInviteModal && (
@@ -315,7 +345,18 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
   );
 }
 
-function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDragOver, onDrop, showLineBefore, showLineAfter, isAdmin, onDelete }: {
+const SLOWMODE_OPTIONS = [
+  { label: 'Off', value: 0 },
+  { label: '5s', value: 5 },
+  { label: '10s', value: 10 },
+  { label: '30s', value: 30 },
+  { label: '1m', value: 60 },
+  { label: '2m', value: 120 },
+  { label: '5m', value: 300 },
+  { label: '10m', value: 600 },
+];
+
+function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDragOver, onDrop, showLineBefore, showLineAfter, isAdmin, onDelete, onSlowmode }: {
   chatroom: Chatroom;
   active: boolean;
   onSelect: (c: Chatroom) => void;
@@ -327,7 +368,11 @@ function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDrag
   showLineAfter: boolean;
   isAdmin: boolean;
   onDelete: (id: number) => void;
+  onSlowmode: (id: number, seconds: number) => void;
 }) {
+  const [showSlowmode, setShowSlowmode] = useState(false);
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null);
+
   return (
     <div className="relative group">
       {showLineBefore && <div className="absolute top-0 left-2 right-2 h-0.5 bg-indigo-400 z-10 rounded" />}
@@ -342,16 +387,54 @@ function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDrag
       >
         <span className="text-gray-400">{chatroom.type === 'voice' ? '🔊' : '#'}</span>
         <span className="flex-1">{chatroom.name}</span>
+        {(chatroom.slowmode ?? 0) > 0 && (
+          <span className="text-xs text-yellow-400 mr-1" title="Slowmode enabled">🐢</span>
+        )}
         {isAdmin && (
-          <button
-            onClick={e => { e.stopPropagation(); onDelete(chatroom.id); }}
-            className="hidden group-hover:block text-gray-400 hover:text-red-400 px-1"
-            title="Delete channel"
-          >
-            ✕
-          </button>
+          <>
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                setPopupPos({ top: rect.bottom + 4, left: rect.left });
+                setShowSlowmode(v => !v);
+              }}
+              className="hidden group-hover:block text-gray-400 hover:text-yellow-400 px-1"
+              title="Slowmode"
+            >
+              ⏱
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); onDelete(chatroom.id); }}
+              className="hidden group-hover:block text-gray-400 hover:text-red-400 px-1"
+              title="Delete channel"
+            >
+              ✕
+            </button>
+          </>
         )}
       </div>
+
+      {showSlowmode && popupPos && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setShowSlowmode(false)} />
+          <div className="fixed z-30 w-40 rounded bg-gray-900 border border-gray-600 p-2 text-xs shadow-xl" style={{ top: popupPos.top, left: popupPos.left }}>
+            <p className="mb-1.5 font-semibold text-gray-400 uppercase tracking-wide">Slowmode</p>
+            <div className="flex flex-wrap gap-1">
+              {SLOWMODE_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => { onSlowmode(chatroom.id, opt.value); setShowSlowmode(false); }}
+                  className={`rounded px-2 py-0.5 ${(chatroom.slowmode ?? 0) === opt.value ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
       {showLineAfter && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-indigo-400 z-10 rounded" />}
     </div>
   );

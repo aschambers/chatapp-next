@@ -50,7 +50,7 @@ export default function InviteModal({ serverId, onClose }: Props) {
     <div
       ref={backdropRef}
       onClick={handleBackdrop}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0"
     >
       <div className="w-full max-w-sm rounded-lg bg-gray-800 p-6 shadow-xl">
 
