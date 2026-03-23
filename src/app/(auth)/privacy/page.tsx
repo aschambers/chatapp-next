@@ -16,7 +16,7 @@ export default function PrivacyPage() {
 
         <section className="space-y-2">
           <h2 className="text-base font-semibold text-white">2. How We Use Your Information</h2>
-          <p>We use your information solely to operate Sanctrel. This includes authenticating your account, displaying your username and profile picture to other users, delivering messages, and sending account-related emails such as email verification and password resets.</p>
+          <p>We use your information solely to operate Meshyve. This includes authenticating your account, displaying your username and profile picture to other users, delivering messages, and sending account-related emails such as email verification and password resets.</p>
           <p>We do not sell, rent, or share your personal information with third parties for marketing purposes.</p>
         </section>
 
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
 
         <section className="space-y-2">
           <h2 className="text-base font-semibold text-white">4. Cookies</h2>
-          <p>Sanctrel uses a single authentication cookie to keep you logged in. This cookie is essential for the app to function and does not track you across other websites.</p>
+          <p>Meshyve uses a single authentication cookie to keep you logged in. This cookie is essential for the app to function and does not track you across other websites.</p>
         </section>
 
         <section className="space-y-2">
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
 
         <section className="space-y-2">
           <h2 className="text-base font-semibold text-white">6. Children</h2>
-          <p>Sanctrel is not intended for users under the age of 13. We do not knowingly collect personal information from children under 13. If you believe a child under 13 has created an account, please contact us and we will delete it.</p>
+          <p>Meshyve is not intended for users under the age of 13. We do not knowingly collect personal information from children under 13. If you believe a child under 13 has created an account, please contact us and we will delete it.</p>
         </section>
 
         <section className="space-y-2">

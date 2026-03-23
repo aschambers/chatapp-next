@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   if (!server.userBans) server.userBans = [];
   (server.userBans as Record<string, unknown>[]).push({
-    userId, username: user.username, imageUrl: user.imageUrl, type: user.type,
+    userId: Number(userId), username: user.username, imageUrl: user.imageUrl, type: user.type,
   });
 
   server.changed('userList', true);

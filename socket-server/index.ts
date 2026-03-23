@@ -1,16 +1,16 @@
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 import sequelize from '../src/lib/db';
 import Message from '../src/lib/models/Message';
+import { runMigrations } from '../src/lib/migrate';
 import ServerModel from '../src/lib/models/Server';
 import Chatroom from '../src/lib/models/Chatroom';
-
-// Bootstrap models
-import '../src/lib/models/User';
+import User from '../src/lib/models/User';
 import '../src/lib/models/Friend';
 import '../src/lib/models/Category';
 import '../src/lib/models/Invite';
+import FriendRequest from '../src/lib/models/FriendRequest';
 
 interface ChatroomMsgData {
   socketId: string;
@@ -22,6 +22,7 @@ interface ChatroomMsgData {
   message: string;
   userId: number;
   messageId: number;
+  nameColor?: string | null;
 }
 
 interface UserMsgData {
@@ -33,6 +34,7 @@ interface UserMsgData {
   username: string;
   message: string;
   messageId: number;
+  nameColor?: string | null;
 }
 
 interface ServerData {
@@ -46,6 +48,7 @@ interface UserPresence {
   userId: number;
   username: string;
   status: UserStatus;
+  socketId: string;
 }
 
 const PORT = Number(process.env.PORT ?? process.env.SOCKET_PORT ?? 3001);
@@ -66,8 +69,25 @@ const voiceChannels = new Map<number, { username: string; socketId: string; room
 // Slowmode: last message timestamp per userId:chatroomId
 const slowmodeTimestamps = new Map<string, number>();
 
-sequelize.sync().then(() => {
+sequelize.sync().then(async () => {
+  await runMigrations();
   console.log('Socket server DB synced');
+
+  async function getChatroomMessages(chatroomId: number, requestingUserId?: number) {
+    const messages = await Message.findAll({ where: { chatroomId, parentId: null }, order: ORDER });
+    const countRows = await sequelize.query<{ parentId: number; count: string }>(
+      `SELECT "parentId", COUNT(*)::int AS count FROM messages WHERE "chatroomId" = :chatroomId AND "parentId" IS NOT NULL GROUP BY "parentId"`,
+      { replacements: { chatroomId }, type: QueryTypes.SELECT }
+    );
+    const threadCounts: Record<number, number> = {};
+    for (const row of countRows) {
+      const parent = messages.find(m => m.id === row.parentId);
+      // Private thread cards only visible to their creator
+      if (parent?.isPrivate && requestingUserId !== undefined && parent.userId !== requestingUserId) continue;
+      threadCounts[row.parentId] = Number(row.count);
+    }
+    return { messages, threadCounts };
+  }
 
   io.on('connection', socket => {
 
@@ -77,18 +97,27 @@ sequelize.sync().then(() => {
 
     // ── Chatroom messages ────────────────────────────────────────────────
     socket.on('GET_CHATROOM_MESSAGES', async (data: ChatroomMsgData) => {
+      // Reject if the chatroom is private and user is not admin/owner
+      const chatroom = await Chatroom.findByPk(data.chatroomId);
+      if (chatroom?.isPrivate) {
+        const server = data.serverId ? await ServerModel.findByPk(data.serverId) : null;
+        const userList = (server?.userList ?? []) as { userId: number; type: string }[];
+        const member = userList.find(u => u.userId === data.userId);
+        if (!member || !['owner', 'admin'].includes(member.type)) return;
+      }
+
       socket.leave(data.previousRoom);
       socket.join(data.room);
 
-      const messages = await Message.findAll({ where: { chatroomId: data.chatroomId }, order: ORDER });
+      const { messages, threadCounts } = await getChatroomMessages(data.chatroomId, data.userId);
       io.to(data.socketId).emit('RECEIVE_CHATROOM_MESSAGES', messages);
+      io.to(data.socketId).emit('RECEIVE_THREAD_COUNTS', threadCounts);
 
       if (data.serverId) {
         const server = await ServerModel.findByPk(data.serverId);
         if (server) io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
       }
 
-      // Send current presence data directly to the joining socket
       socket.emit('RECEIVE_USERS', users);
     });
 
@@ -113,22 +142,107 @@ sequelize.sync().then(() => {
         userId: data.userId,
         chatroomId: data.chatroomId,
         friendId: null,
+        nameColor: data.nameColor ?? null,
       });
-      const messages = await Message.findAll({ where: { chatroomId: data.chatroomId }, order: ORDER });
+      const { messages, threadCounts } = await getChatroomMessages(data.chatroomId);
       io.in(data.room).emit('RECEIVE_CHATROOM_MESSAGES', messages);
+      io.in(data.room).emit('RECEIVE_THREAD_COUNTS', threadCounts);
+    });
+
+    socket.on('REACT_CHATROOM_MESSAGE', async ({ messageId, emoji, userId, chatroomId, room }: { messageId: number; emoji: string; userId: number; chatroomId: number; room: string }) => {
+      const msg = await Message.findByPk(messageId);
+      if (!msg) return;
+      const reactions = { ...((msg.reactions ?? {}) as Record<string, number[]>) };
+      const users = reactions[emoji] ?? [];
+      if (users.includes(userId)) {
+        const filtered = users.filter((id: number) => id !== userId);
+        if (filtered.length === 0) delete reactions[emoji];
+        else reactions[emoji] = filtered;
+      } else {
+        reactions[emoji] = [...users, userId];
+      }
+      await msg.update({ reactions });
+      msg.changed('reactions', true);
+      const { messages, threadCounts } = await getChatroomMessages(chatroomId);
+      io.in(room).emit('RECEIVE_CHATROOM_MESSAGES', messages);
+      io.in(room).emit('RECEIVE_THREAD_COUNTS', threadCounts);
     });
 
     socket.on('DELETE_CHATROOM_MESSAGE', async (data: ChatroomMsgData) => {
       await Message.destroy({ where: { id: data.messageId } });
-      const messages = await Message.findAll({ where: { chatroomId: data.chatroomId }, order: ORDER });
+      const { messages, threadCounts } = await getChatroomMessages(data.chatroomId);
       io.in(data.room).emit('RECEIVE_CHATROOM_MESSAGES', messages);
+      io.in(data.room).emit('RECEIVE_THREAD_COUNTS', threadCounts);
     });
 
     socket.on('EDIT_CHATROOM_MESSAGE', async (data: ChatroomMsgData) => {
       const msg = await Message.findByPk(data.messageId);
       if (msg) await msg.update({ message: data.message });
-      const messages = await Message.findAll({ where: { chatroomId: data.chatroomId }, order: ORDER });
+      const { messages, threadCounts } = await getChatroomMessages(data.chatroomId);
       io.in(data.room).emit('RECEIVE_CHATROOM_MESSAGES', messages);
+      io.in(data.room).emit('RECEIVE_THREAD_COUNTS', threadCounts);
+    });
+
+    socket.on('GET_THREAD_MESSAGES', async ({ parentId, room, userId }: { parentId: number; room: string; socketId: string; userId?: number }) => {
+      const parent = await Message.findByPk(parentId);
+      if (parent?.isPrivate && userId !== undefined && parent.userId !== userId) return;
+      socket.join(room);
+      const messages = await Message.findAll({ where: { parentId }, order: ORDER });
+      socket.emit('RECEIVE_THREAD_MESSAGES', messages);
+    });
+
+    socket.on('SEND_THREAD_MESSAGE', async ({ parentId, chatroomId, username, message, userId, nameColor, room, chatroomRoom }: { parentId: number; chatroomId: number; username: string; message: string; userId: number; nameColor: string | null; room: string; chatroomRoom: string }) => {
+      await Message.create({ username, message, userId, chatroomId, friendId: null, nameColor: nameColor ?? null, parentId });
+      const threadMessages = await Message.findAll({ where: { parentId }, order: ORDER });
+      socket.emit('RECEIVE_THREAD_MESSAGES', threadMessages);
+      socket.to(room).emit('RECEIVE_THREAD_MESSAGES', threadMessages);
+      const { threadCounts } = await getChatroomMessages(chatroomId);
+      io.in(chatroomRoom).emit('RECEIVE_THREAD_COUNTS', threadCounts);
+    });
+
+    socket.on('DELETE_THREAD_MESSAGE', async ({ messageId, parentId, chatroomId, room, chatroomRoom }: { messageId: number; parentId: number; chatroomId: number; room: string; chatroomRoom: string }) => {
+      await Message.destroy({ where: { id: messageId } });
+      const threadMessages = await Message.findAll({ where: { parentId }, order: ORDER });
+      socket.emit('RECEIVE_THREAD_MESSAGES', threadMessages);
+      socket.to(room).emit('RECEIVE_THREAD_MESSAGES', threadMessages);
+      const { threadCounts } = await getChatroomMessages(chatroomId);
+      io.in(chatroomRoom).emit('RECEIVE_THREAD_COUNTS', threadCounts);
+    });
+
+    socket.on('EDIT_THREAD_MESSAGE', async ({ messageId, message, parentId, room }: { messageId: number; message: string; parentId: number; room: string }) => {
+      const msg = await Message.findByPk(messageId);
+      if (msg) await msg.update({ message });
+      const threadMessages = await Message.findAll({ where: { parentId }, order: ORDER });
+      socket.emit('RECEIVE_THREAD_MESSAGES', threadMessages);
+      socket.to(room).emit('RECEIVE_THREAD_MESSAGES', threadMessages);
+    });
+
+    socket.on('CREATE_THREAD', async (
+      data: { username: string; message: string; userId: number; chatroomId: number; room: string; nameColor?: string | null; isPrivate?: boolean },
+      callback: (msg: unknown) => void
+    ) => {
+      const newMsg = await Message.create({
+        username: data.username,
+        message: data.message,
+        userId: data.userId,
+        chatroomId: data.chatroomId,
+        friendId: null,
+        nameColor: data.nameColor ?? null,
+        isPrivate: data.isPrivate ?? false,
+      });
+      const { messages, threadCounts } = await getChatroomMessages(data.chatroomId);
+      io.in(data.room).emit('RECEIVE_CHATROOM_MESSAGES', messages);
+      io.in(data.room).emit('RECEIVE_THREAD_COUNTS', threadCounts);
+      if (typeof callback === 'function') callback(newMsg.toJSON());
+    });
+
+    socket.on('PIN_MESSAGE', async ({ messageId, chatroomId, room }: { messageId: number; chatroomId: number; room: string }) => {
+      const msg = await Message.findByPk(messageId);
+      if (!msg) return;
+      await msg.update({ isPinned: !msg.isPinned });
+      const { messages, threadCounts } = await getChatroomMessages(chatroomId);
+      io.in(room).emit('RECEIVE_CHATROOM_MESSAGES', messages);
+      io.in(room).emit('RECEIVE_THREAD_COUNTS', threadCounts);
     });
 
     // ── Personal messages (user messaging themselves) ────────────────────
@@ -145,7 +259,7 @@ sequelize.sync().then(() => {
 
     socket.on('SEND_PERSONAL_MESSAGE', async (data: UserMsgData) => {
       const uid = data.userId;
-      await Message.create({ username: data.username, message: data.message, userId: uid, friendId: uid, chatroomId: null });
+      await Message.create({ username: data.username, message: data.message, userId: uid, friendId: uid, chatroomId: null, nameColor: data.nameColor ?? null });
       const messages = await Message.findAll({
         where: { [Op.and]: [{ chatroomId: null }, { userId: uid }, { friendId: uid }] },
         order: ORDER,
@@ -174,7 +288,7 @@ sequelize.sync().then(() => {
     socket.on('SEND_PRIVATE_MESSAGE', async (data: UserMsgData) => {
       const uid = data.userId;
       const fid = data.friendId;
-      await Message.create({ username: data.username, message: data.message, userId: uid, friendId: fid, chatroomId: null });
+      await Message.create({ username: data.username, message: data.message, userId: uid, friendId: fid, chatroomId: null, nameColor: data.nameColor ?? null });
       const messages = await Message.findAll({
         where: {
           [Op.or]: [
@@ -185,6 +299,34 @@ sequelize.sync().then(() => {
         order: ORDER,
       });
       io.in(data.room).emit('RECEIVE_PRIVATE_MESSAGES', messages);
+    });
+
+    socket.on('REACT_USER_MESSAGE', async ({ messageId, emoji, userId, friendId, isSelf, room, socketId }: { messageId: number; emoji: string; userId: number; friendId: number; isSelf: boolean; room: string; socketId: string }) => {
+      const msg = await Message.findByPk(messageId);
+      if (!msg) return;
+      const reactions = { ...((msg.reactions ?? {}) as Record<string, number[]>) };
+      const users = reactions[emoji] ?? [];
+      if (users.includes(userId)) {
+        const filtered = users.filter((id: number) => id !== userId);
+        if (filtered.length === 0) delete reactions[emoji];
+        else reactions[emoji] = filtered;
+      } else {
+        reactions[emoji] = [...users, userId];
+      }
+      await msg.update({ reactions });
+      msg.changed('reactions', true);
+      const uid = userId;
+      const fid = friendId;
+      if (isSelf) {
+        const messages = await Message.findAll({ where: { [Op.and]: [{ chatroomId: null }, { userId: uid }, { friendId: uid }] }, order: ORDER });
+        io.in(room).emit('RECEIVE_PERSONAL_MESSAGES', messages);
+      } else {
+        const messages = await Message.findAll({
+          where: { [Op.or]: [{ [Op.and]: [{ userId: uid }, { friendId: fid }, { chatroomId: null }] }, { [Op.and]: [{ userId: fid }, { friendId: uid }, { chatroomId: null }] }] },
+          order: ORDER,
+        });
+        io.in(room).emit('RECEIVE_PRIVATE_MESSAGES', messages);
+      }
     });
 
     socket.on('DELETE_USER_MESSAGE', async (data: UserMsgData) => {
@@ -228,14 +370,53 @@ sequelize.sync().then(() => {
       if (server) io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
     });
 
-    socket.on('KICK_SERVER_USER', async (data: ServerData) => {
-      const server = await ServerModel.findByPk(data.serverId);
-      if (server) io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
+    socket.on('KICK_SERVER_USER', async (data: ServerData & { userId: number }) => {
+      const [user, server] = await Promise.all([User.findByPk(data.userId), ServerModel.findByPk(data.serverId)]);
+      if (!user || !server) return;
+
+      const sList = user.serversList as Record<string, unknown>[];
+      const sIdx = sList.findIndex(s => s.serverId === data.serverId);
+      if (sIdx > -1) sList.splice(sIdx, 1);
+      user.changed('serversList', true);
+      await user.save();
+
+      const uList = server.userList as Record<string, unknown>[];
+      const uIdx = uList.findIndex(u => u.userId === data.userId);
+      if (uIdx > -1) uList.splice(uIdx, 1);
+      server.changed('userList', true);
+      await server.save();
+
+      io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
+      const target = users.find(u => u.userId === data.userId);
+      if (target) io.to(target.socketId).emit('FORCE_HOME');
     });
 
-    socket.on('BAN_SERVER_USER', async (data: ServerData) => {
-      const server = await ServerModel.findByPk(data.serverId);
-      if (server) io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
+    socket.on('BAN_SERVER_USER', async (data: ServerData & { userId: number }) => {
+      const [user, server] = await Promise.all([User.findByPk(data.userId), ServerModel.findByPk(data.serverId)]);
+      if (!user || !server) return;
+
+      const sList = user.serversList as Record<string, unknown>[];
+      const sIdx = sList.findIndex(s => s.serverId === data.serverId);
+      if (sIdx > -1) sList.splice(sIdx, 1);
+      user.changed('serversList', true);
+      await user.save();
+
+      const uList = server.userList as Record<string, unknown>[];
+      const uIdx = uList.findIndex(u => u.userId === data.userId);
+      if (uIdx > -1) uList.splice(uIdx, 1);
+
+      if (!server.userBans) server.userBans = [];
+      (server.userBans as Record<string, unknown>[]).push({
+        userId: data.userId, username: user.username, imageUrl: user.imageUrl ?? null, type: user.type,
+      });
+
+      server.changed('userList', true);
+      server.changed('userBans', true);
+      await server.save();
+
+      io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
+      const target = users.find(u => u.userId === data.userId);
+      if (target) io.to(target.socketId).emit('FORCE_HOME');
     });
 
     // ── WebRTC signalling ─────────────────────────────────────────────────
@@ -290,9 +471,10 @@ sequelize.sync().then(() => {
       const status: UserStatus = data.status ?? (data.active ? 'online' : 'offline');
       const existing = users.find(u => u.username === data.username);
       if (!existing) {
-        users.push({ userId: data.userId, username: data.username, status });
+        users.push({ userId: data.userId, username: data.username, status, socketId: socket.id });
       } else {
         existing.status = status;
+        existing.socketId = socket.id;
       }
       io.emit('RECEIVE_USERS', users);
     });
@@ -311,6 +493,26 @@ sequelize.sync().then(() => {
 
     socket.on('GET_USERS', () => {
       socket.emit('RECEIVE_USERS', users);
+    });
+
+    // ── Friend requests ───────────────────────────────────────────────────
+    socket.on('SEND_FRIEND_REQUEST', async ({ requestId }: { requestId: number }) => {
+      const request = await FriendRequest.findByPk(requestId);
+      if (!request) return;
+      const target = users.find(u => u.userId === request.receiverId);
+      if (target) io.to(target.socketId).emit('RECEIVE_FRIEND_REQUEST', request.toJSON());
+    });
+
+    socket.on('FRIEND_REQUEST_ACCEPTED', async ({ requestId }: { requestId: number }) => {
+      const request = await FriendRequest.findByPk(requestId);
+      if (!request) return;
+      const target = users.find(u => u.userId === request.senderId);
+      if (target) io.to(target.socketId).emit('FRIEND_REQUEST_ACCEPTED', { requestId, receiverUsername: request.receiverUsername });
+    });
+
+    socket.on('FRIEND_REMOVED', ({ userId, friendId }: { userId: number; friendId: number }) => {
+      const target = users.find(u => u.userId === friendId);
+      if (target) io.to(target.socketId).emit('FRIEND_REMOVED', { userId });
     });
   });
 

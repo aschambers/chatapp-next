@@ -62,7 +62,7 @@ export default function InviteModal({ serverId, onClose }: Props) {
               <span className="text-sm text-gray-300">Instant invite code</span>
               <button
                 onClick={() => setInstantFormat(v => !v)}
-                className={`relative h-6 w-11 rounded-full transition-colors ${instantFormat ? 'bg-indigo-600' : 'bg-gray-600'}`}
+                className={`relative h-6 w-11 rounded-full transition-colors ${instantFormat ? 'bg-yellow-500' : 'bg-gray-600'}`}
               >
                 <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${instantFormat ? 'left-5' : 'left-0.5'}`} />
               </button>
@@ -87,7 +87,7 @@ export default function InviteModal({ serverId, onClose }: Props) {
             <div className="flex justify-end">
               <button
                 onClick={() => setView('main')}
-                className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+                className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600"
               >
                 Save
               </button>
@@ -118,7 +118,7 @@ export default function InviteModal({ serverId, onClose }: Props) {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="friend@example.com"
-                  className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-yellow-400"
                 />
               </div>
             )}
@@ -132,7 +132,7 @@ export default function InviteModal({ serverId, onClose }: Props) {
                 />
                 <button
                   onClick={handleCopy}
-                  className="rounded bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-700"
+                  className="rounded bg-yellow-500 px-3 py-2 text-sm text-gray-900 hover:bg-yellow-600"
                 >
                   {copied ? '✓' : 'Copy'}
                 </button>
@@ -151,7 +151,7 @@ export default function InviteModal({ serverId, onClose }: Props) {
                 <button
                   onClick={handleCreate}
                   disabled={loading || (!instantFormat && !email.trim())}
-                  className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600 disabled:opacity-50"
                 >
                   {loading ? 'Creating…' : 'Create'}
                 </button>

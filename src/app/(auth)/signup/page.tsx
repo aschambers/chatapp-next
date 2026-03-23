@@ -25,7 +25,7 @@ export default function SignupPage() {
         <div className="rounded-lg bg-gray-800 p-8 text-center text-white shadow-lg">
           <h2 className="mb-2 text-xl font-bold">Check your email</h2>
           <p className="text-gray-300">We sent a verification link to <strong>{email}</strong>.</p>
-          <Link href="/login" className="mt-4 inline-block text-indigo-400 hover:underline">Back to login</Link>
+          <Link href="/login" className="mt-4 inline-block text-yellow-300 hover:underline">Back to login</Link>
         </div>
       </div>
     );
@@ -43,7 +43,7 @@ export default function SignupPage() {
               value={username}
               onChange={e => { if (e.target.value.length <= 30) setUsername(e.target.value); }}
               required
-              className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </div>
           <div>
@@ -53,7 +53,7 @@ export default function SignupPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </div>
           <div>
@@ -63,21 +63,21 @@ export default function SignupPage() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </div>
           {error && <p className="text-sm text-red-400">Username or email already exists.</p>}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded bg-indigo-600 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="w-full rounded bg-yellow-500 py-2 font-semibold text-gray-900 hover:bg-yellow-600 disabled:opacity-50"
           >
             {isLoading ? 'Creating account…' : 'Sign up'}
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-400">
           Already have an account?{' '}
-          <Link href="/login" className="text-indigo-400 hover:underline">Sign in</Link>
+          <Link href="/login" className="text-yellow-300 hover:underline">Sign in</Link>
         </p>
         <p className="mt-3 text-center text-xs text-gray-500">
           By signing up you agree to our{' '}

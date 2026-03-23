@@ -60,7 +60,7 @@ function VerificationContent() {
           />
           <button
             onClick={() => dispatch(sendEmail({ email: resendEmail }))}
-            className="w-full rounded bg-indigo-600 py-2 text-white hover:bg-indigo-700"
+            className="w-full rounded bg-yellow-500 py-2 text-gray-900 hover:bg-yellow-600"
           >
             Resend verification email
           </button>

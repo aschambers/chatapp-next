@@ -1,15 +1,20 @@
-'use client';
+"use client";
 
-import { useRef, useState, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from '@/lib/redux/store';
-import { userUpdate } from '@/lib/redux/modules/users/users';
-import { JWTPayload } from '@/lib/auth';
+import { useRef, useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/lib/redux/store";
+import { userUpdate } from "@/lib/redux/modules/users/users";
+import { JWTPayload } from "@/lib/auth";
 
 interface Props {
   user: JWTPayload;
   onClose: () => void;
-  onSaved: (updated: { username?: string; email?: string; imageUrl?: string }) => void;
+  onSaved: (updated: {
+    username?: string;
+    email?: string;
+    imageUrl?: string;
+    nameColor?: string | null;
+  }) => void;
 }
 
 interface NotificationSettings {
@@ -38,23 +43,41 @@ const defaultPrivacy: PrivacySettings = {
   allowDirectMessages: true,
 };
 
-type Tab = 'profile' | 'notifications' | 'privacy';
+function hexToLuminance(hex: string): number {
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const toLinear = (c: number) =>
+    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+}
+function contrastRatio(hex1: string, hex2: string): number {
+  const l1 = hexToLuminance(hex1),
+    l2 = hexToLuminance(hex2);
+  return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+}
+const BG = "#1f2937";
+const isReadable = (color: string) => contrastRatio(color, BG) >= 3;
+
+type Tab = "profile" | "notifications" | "privacy";
 
 export default function UserSettings({ user, onClose, onSaved }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<Tab>('profile');
+  const [tab, setTab] = useState<Tab>("profile");
 
   const [username, setUsername] = useState(user.username);
   const [email, setEmail] = useState(user.email);
-  const [imagePreview, setImagePreview] = useState(user.imageUrl ?? '');
+  const [imagePreview, setImagePreview] = useState(user.imageUrl ?? "");
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [nameColor, setNameColor] = useState<string>(user.nameColor ?? "");
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
   const storageKey = `user_settings_${user.id}`;
 
-  const [notifications, setNotifications] = useState<NotificationSettings>(defaultNotifications);
+  const [notifications, setNotifications] =
+    useState<NotificationSettings>(defaultNotifications);
   const [privacy, setPrivacy] = useState<PrivacySettings>(defaultPrivacy);
 
   useEffect(() => {
@@ -62,8 +85,13 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.notifications) setNotifications({ ...defaultNotifications, ...parsed.notifications });
-        if (parsed.privacy) setPrivacy({ ...defaultPrivacy, ...parsed.privacy });
+        if (parsed.notifications)
+          setNotifications({
+            ...defaultNotifications,
+            ...parsed.notifications,
+          });
+        if (parsed.privacy)
+          setPrivacy({ ...defaultPrivacy, ...parsed.privacy });
       }
     } catch {}
   }, [storageKey]);
@@ -78,22 +106,36 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
   };
 
   const handleSaveProfile = async () => {
-    if (username.trim().length < 2) { setError('Username must be at least 2 characters.'); return; }
+    if (username.trim().length < 2) {
+      setError("Username must be at least 2 characters.");
+      return;
+    }
+    if (nameColor && !isReadable(nameColor)) {
+      setError("Color does not have enough contrast to be readable.");
+      return;
+    }
     setSaving(true);
-    setError('');
+    setError("");
     const formData = new FormData();
-    formData.append('userId', String(user.id));
-    formData.append('username', username.trim());
-    formData.append('email', email.trim());
-    if (imageFile) formData.append('imageUrl', imageFile);
+    formData.append("userId", String(user.id));
+    formData.append("username", username.trim());
+    formData.append("email", email.trim());
+    if (imageFile) formData.append("imageUrl", imageFile);
+    formData.append("nameColor", nameColor);
 
     const result = await dispatch(userUpdate(formData));
     setSaving(false);
     if (userUpdate.fulfilled.match(result)) {
-      onSaved({ username: username.trim(), email: email.trim(), imageUrl: imagePreview || undefined });
+      console.log(nameColor);
+      onSaved({
+        username: username.trim(),
+        email: email.trim(),
+        imageUrl: imagePreview || undefined,
+        nameColor: nameColor || null,
+      });
       onClose();
     } else {
-      setError('Failed to save changes.');
+      setError("Failed to save changes.");
     }
   };
 
@@ -101,7 +143,10 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
     try {
       const stored = localStorage.getItem(storageKey);
       const parsed = stored ? JSON.parse(stored) : {};
-      localStorage.setItem(storageKey, JSON.stringify({ ...parsed, notifications }));
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ ...parsed, notifications }),
+      );
     } catch {}
     onClose();
   };
@@ -115,42 +160,59 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
     onClose();
   };
 
-  const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+  const Toggle = ({
+    checked,
+    onChange,
+  }: {
+    checked: boolean;
+    onChange: (v: boolean) => void;
+  }) => (
     <button
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors ${checked ? 'bg-indigo-600' : 'bg-gray-600'}`}
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors ${checked ? "bg-yellow-500" : "bg-gray-600"}`}
     >
       <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`}
+        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`}
       />
     </button>
   );
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'profile', label: 'Profile' },
-    { id: 'notifications', label: 'Notifications' },
-    { id: 'privacy', label: 'Privacy' },
+    { id: "profile", label: "Profile" },
+    { id: "notifications", label: "Notifications" },
+    { id: "privacy", label: "Privacy" },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0" onClick={onClose}>
-      <div className="w-full max-w-md rounded-lg bg-gray-800 shadow-xl" onClick={e => e.stopPropagation()}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-lg bg-gray-800 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-700 px-6 py-4">
           <h2 className="text-lg font-bold text-white">User Settings</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white">
+            ✕
+          </button>
         </div>
 
         {/* Tabs */}
         <div className="flex border-b border-gray-700 px-6">
-          {tabs.map(t => (
+          {tabs.map((t) => (
             <button
               key={t.id}
-              onClick={() => { setTab(t.id); setError(''); }}
+              onClick={() => {
+                setTab(t.id);
+                setError("");
+              }}
               className={`mr-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                 tab === t.id
-                  ? 'border-indigo-500 text-white'
-                  : 'border-transparent text-gray-400 hover:text-gray-200'
+                  ? "border-yellow-400 text-white"
+                  : "border-transparent text-gray-400 hover:text-gray-200"
               }`}
             >
               {t.label}
@@ -160,113 +222,199 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
 
         <div className="p-6">
           {/* Profile Tab */}
-          {tab === 'profile' && (
+          {tab === "profile" && (
             <>
               <div className="mb-5 flex items-center gap-4">
                 <div
                   onClick={() => fileRef.current?.click()}
-                  className="flex h-16 w-16 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-indigo-600 text-xl font-bold hover:opacity-80"
+                  className="flex h-16 w-16 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-gray-900 ring-2 ring-gray-600 text-xl font-bold text-white hover:opacity-80"
                 >
-                  {imagePreview
-                    ? <img src={imagePreview} alt="avatar" className="h-full w-full object-cover" />
-                    : username[0]?.toUpperCase()
-                  }
+                  {imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="avatar"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    username[0]?.toUpperCase()
+                  )}
                 </div>
-                <button onClick={() => fileRef.current?.click()} className="text-sm text-indigo-400 hover:underline">
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="text-sm text-yellow-300 hover:underline"
+                >
                   Change avatar
                 </button>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1 block text-xs text-gray-400">Username</label>
+                  <label className="mb-1 block text-xs text-gray-400">
+                    Username
+                  </label>
                   <input
                     type="text"
                     value={username}
-                    onChange={e => { if (e.target.value.length <= 30) setUsername(e.target.value); }}
-                    className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                    onChange={(e) => {
+                      if (e.target.value.length <= 30)
+                        setUsername(e.target.value);
+                    }}
+                    className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-yellow-400"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-400">Email</label>
+                  <label className="mb-1 block text-xs text-gray-400">
+                    Email
+                  </label>
                   <input
                     type="email"
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-yellow-400"
                   />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-gray-400">
+                    Name Color
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={nameColor || "#fde047"}
+                      onChange={(e) => setNameColor(e.target.value)}
+                      className="h-8 w-10 cursor-pointer rounded border-0 bg-transparent p-0"
+                    />
+                    <span
+                      className="font-semibold text-sm"
+                      style={{ color: nameColor || "#fde047" }}
+                    >
+                      {username || "Preview"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setNameColor("")}
+                      className="ml-auto text-xs text-gray-400 hover:text-gray-200"
+                    >
+                      Reset to default
+                    </button>
+                  </div>
+                  {nameColor && !isReadable(nameColor) && (
+                    <p className="mt-1 text-xs text-yellow-400">
+                      This color may be hard to read on the dark background.
+                    </p>
+                  )}
                 </div>
               </div>
 
               {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
 
               <div className="mt-5 flex justify-end gap-3">
-                <button onClick={onClose} className="rounded bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600">
+                <button
+                  onClick={onClose}
+                  className="rounded bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveProfile}
                   disabled={saving}
-                  className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+                  className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600 disabled:opacity-50"
                 >
-                  {saving ? 'Saving…' : 'Save Changes'}
+                  {saving ? "Saving…" : "Save Changes"}
                 </button>
               </div>
             </>
           )}
 
           {/* Notifications Tab */}
-          {tab === 'notifications' && (
+          {tab === "notifications" && (
             <>
               <div className="space-y-5">
                 <div>
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Messages</p>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    Messages
+                  </p>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-white">Message Notifications</p>
-                        <p className="text-xs text-gray-400">Get notified when you receive new messages</p>
+                        <p className="text-sm text-white">
+                          Message Notifications
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          Get notified when you receive new messages
+                        </p>
                       </div>
                       <Toggle
                         checked={notifications.messageNotifications}
-                        onChange={v => setNotifications(n => ({ ...n, messageNotifications: v }))}
+                        onChange={(v) =>
+                          setNotifications((n) => ({
+                            ...n,
+                            messageNotifications: v,
+                          }))
+                        }
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-white">Sound Effects</p>
-                        <p className="text-xs text-gray-400">Play sounds for incoming messages</p>
+                        <p className="text-xs text-gray-400">
+                          Play sounds for incoming messages
+                        </p>
                       </div>
                       <Toggle
                         checked={notifications.soundEnabled}
-                        onChange={v => setNotifications(n => ({ ...n, soundEnabled: v }))}
+                        onChange={(v) =>
+                          setNotifications((n) => ({ ...n, soundEnabled: v }))
+                        }
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="border-t border-gray-700 pt-4">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Social</p>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    Social
+                  </p>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-white">Friend Requests</p>
-                        <p className="text-xs text-gray-400">Get notified about new friend requests</p>
+                        <p className="text-xs text-gray-400">
+                          Get notified about new friend requests
+                        </p>
                       </div>
                       <Toggle
                         checked={notifications.friendRequestNotifications}
-                        onChange={v => setNotifications(n => ({ ...n, friendRequestNotifications: v }))}
+                        onChange={(v) =>
+                          setNotifications((n) => ({
+                            ...n,
+                            friendRequestNotifications: v,
+                          }))
+                        }
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-white">Server Activity</p>
-                        <p className="text-xs text-gray-400">Get notified about server events</p>
+                        <p className="text-xs text-gray-400">
+                          Get notified about server events
+                        </p>
                       </div>
                       <Toggle
                         checked={notifications.serverNotifications}
-                        onChange={v => setNotifications(n => ({ ...n, serverNotifications: v }))}
+                        onChange={(v) =>
+                          setNotifications((n) => ({
+                            ...n,
+                            serverNotifications: v,
+                          }))
+                        }
                       />
                     </div>
                   </div>
@@ -274,12 +422,15 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
               </div>
 
               <div className="mt-5 flex justify-end gap-3">
-                <button onClick={onClose} className="rounded bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600">
+                <button
+                  onClick={onClose}
+                  className="rounded bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                >
                   Cancel
                 </button>
                 <button
                   onClick={handleSaveNotifications}
-                  className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+                  className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600"
                 >
                   Save Changes
                 </button>
@@ -288,46 +439,62 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
           )}
 
           {/* Privacy Tab */}
-          {tab === 'privacy' && (
+          {tab === "privacy" && (
             <>
               <div className="space-y-5">
                 <div>
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Visibility</p>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    Visibility
+                  </p>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-white">Online Status</p>
-                        <p className="text-xs text-gray-400">Show others when you're online</p>
+                        <p className="text-xs text-gray-400">
+                          Show others when you're online
+                        </p>
                       </div>
                       <Toggle
                         checked={privacy.showOnlineStatus}
-                        onChange={v => setPrivacy(p => ({ ...p, showOnlineStatus: v }))}
+                        onChange={(v) =>
+                          setPrivacy((p) => ({ ...p, showOnlineStatus: v }))
+                        }
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="border-t border-gray-700 pt-4">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Interactions</p>
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    Interactions
+                  </p>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-white">Friend Requests</p>
-                        <p className="text-xs text-gray-400">Allow others to send you friend requests</p>
+                        <p className="text-xs text-gray-400">
+                          Allow others to send you friend requests
+                        </p>
                       </div>
                       <Toggle
                         checked={privacy.allowFriendRequests}
-                        onChange={v => setPrivacy(p => ({ ...p, allowFriendRequests: v }))}
+                        onChange={(v) =>
+                          setPrivacy((p) => ({ ...p, allowFriendRequests: v }))
+                        }
                       />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-white">Direct Messages</p>
-                        <p className="text-xs text-gray-400">Allow others to send you direct messages</p>
+                        <p className="text-xs text-gray-400">
+                          Allow others to send you direct messages
+                        </p>
                       </div>
                       <Toggle
                         checked={privacy.allowDirectMessages}
-                        onChange={v => setPrivacy(p => ({ ...p, allowDirectMessages: v }))}
+                        onChange={(v) =>
+                          setPrivacy((p) => ({ ...p, allowDirectMessages: v }))
+                        }
                       />
                     </div>
                   </div>
@@ -335,12 +502,15 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
               </div>
 
               <div className="mt-5 flex justify-end gap-3">
-                <button onClick={onClose} className="rounded bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600">
+                <button
+                  onClick={onClose}
+                  className="rounded bg-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-600"
+                >
                   Cancel
                 </button>
                 <button
                   onClick={handleSavePrivacy}
-                  className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+                  className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600"
                 >
                   Save Changes
                 </button>
@@ -349,9 +519,23 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
           )}
         </div>
         <div className="border-t border-gray-700 py-3 text-center text-xs text-gray-500">
-          <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300">Terms of Service</a>
-          {' '}·{' '}
-          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-gray-300">Privacy Policy</a>
+          <a
+            href="/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-gray-300"
+          >
+            Terms of Service
+          </a>{" "}
+          ·{" "}
+          <a
+            href="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-gray-300"
+          >
+            Privacy Policy
+          </a>
         </div>
       </div>
     </div>

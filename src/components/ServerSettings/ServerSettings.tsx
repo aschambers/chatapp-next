@@ -148,7 +148,7 @@ export default function ServerSettings({
             <button
               key={t.id}
               onClick={() => { setTab(t.id); setSaveError(''); }}
-              className={`px-5 py-2 text-sm capitalize ${tab === t.id ? 'border-b-2 border-indigo-500 text-white' : 'text-gray-400 hover:text-white'}`}
+              className={`px-5 py-2 text-sm capitalize ${tab === t.id ? 'border-b-2 border-yellow-400 text-white' : 'text-gray-400 hover:text-white'}`}
             >
               {t.label}
             </button>
@@ -165,7 +165,7 @@ export default function ServerSettings({
               <div className="mb-5 flex items-center gap-4">
                 <div
                   onClick={() => isOwner && fileRef.current?.click()}
-                  className={`flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-indigo-600 text-2xl font-bold ${isOwner ? 'cursor-pointer hover:opacity-80' : ''}`}
+                  className={`flex h-20 w-20 flex-shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-yellow-500 text-2xl font-bold text-gray-900 ${isOwner ? 'cursor-pointer hover:opacity-80' : ''}`}
                 >
                   {imagePreview
                     ? <img src={imagePreview} alt="icon" className="h-full w-full object-cover" />
@@ -175,7 +175,7 @@ export default function ServerSettings({
                 <div>
                   <p className="text-sm font-semibold text-white">{serverInfo?.name ?? serverName}</p>
                   {isOwner && (
-                    <button onClick={() => fileRef.current?.click()} className="mt-1 text-xs text-indigo-400 hover:underline">
+                    <button onClick={() => fileRef.current?.click()} className="mt-1 text-xs text-yellow-300 hover:underline">
                       Change icon
                     </button>
                   )}
@@ -191,7 +191,7 @@ export default function ServerSettings({
                       type="text"
                       value={editName}
                       onChange={e => { if (e.target.value.length <= 30) setEditName(e.target.value); }}
-                      className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                      className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-yellow-400"
                     />
                   ) : (
                     <p className="rounded bg-gray-700 px-3 py-2 text-sm text-white">{serverInfo?.name ?? serverName}</p>
@@ -206,7 +206,7 @@ export default function ServerSettings({
                         <button
                           key={opt}
                           onClick={() => setEditPublic(opt === 'Public')}
-                          className={`flex-1 rounded py-2 text-sm ${(opt === 'Public') === editPublic ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                          className={`flex-1 rounded py-2 text-sm ${(opt === 'Public') === editPublic ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
                         >
                           {opt}
                         </button>
@@ -227,7 +227,7 @@ export default function ServerSettings({
                   <button
                     onClick={handleSaveOverview}
                     disabled={saving}
-                    className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+                    className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600 disabled:opacity-50"
                   >
                     {saving ? 'Saving…' : 'Save Changes'}
                   </button>
@@ -243,7 +243,7 @@ export default function ServerSettings({
                 const canEdit = isOwner && user.username !== currentUsername && user.type !== 'owner';
                 return (
                   <div key={i} className="flex items-center gap-3 rounded bg-gray-700 px-3 py-2">
-                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-600 text-xs font-bold">
+                    <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-900 ring-1 ring-gray-600 text-xs font-bold text-white">
                       {user.imageUrl
                         ? <img src={user.imageUrl} alt={user.username} className="h-full w-full rounded-full object-cover" />
                         : user.username[0]?.toUpperCase()
@@ -284,7 +284,7 @@ export default function ServerSettings({
                   {isOwner && (
                     <button
                       onClick={() => handleUnban(user)}
-                      className="rounded bg-indigo-600 px-3 py-1 text-xs text-white hover:bg-indigo-700"
+                      className="rounded bg-yellow-500 px-3 py-1 text-xs text-gray-900 hover:bg-yellow-600"
                     >
                       Unban
                     </button>
@@ -303,7 +303,7 @@ export default function ServerSettings({
               {(invites).map((invite, i) => (
                 <div key={i} className="rounded bg-gray-700 px-3 py-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-sm text-indigo-300">{invite.code}</span>
+                    <span className="font-mono text-sm text-yellow-300">{invite.code}</span>
                     <div className="flex gap-3">
                       <button
                         onClick={() => navigator.clipboard.writeText(invite.code)}

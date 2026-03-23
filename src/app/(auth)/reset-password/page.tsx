@@ -26,7 +26,7 @@ function ResetPasswordContent() {
       <div className="w-full">
         <div className="rounded-lg bg-gray-800 p-8 text-center text-white shadow-lg">
           <h2 className="text-xl font-bold text-green-400">Password reset!</h2>
-          <Link href="/login" className="mt-4 block text-indigo-400 hover:underline">Back to login</Link>
+          <Link href="/login" className="mt-4 block text-yellow-300 hover:underline">Back to login</Link>
         </div>
       </div>
     );
@@ -38,7 +38,7 @@ function ResetPasswordContent() {
         <div className="rounded-lg bg-gray-800 p-8 text-center text-white shadow-lg">
           <h2 className="text-xl font-bold">Check your email</h2>
           <p className="mt-2 text-gray-300">A password reset link has been sent.</p>
-          <Link href="/login" className="mt-4 block text-indigo-400 hover:underline">Back to login</Link>
+          <Link href="/login" className="mt-4 block text-yellow-300 hover:underline">Back to login</Link>
         </div>
       </div>
     );
@@ -67,7 +67,7 @@ function ResetPasswordContent() {
             </div>
             {mismatch && <p className="text-sm text-red-400">Passwords do not match.</p>}
             {resetPassError && <p className="text-sm text-red-400">Reset failed. Link may have expired.</p>}
-            <button type="submit" disabled={isLoading} className="w-full rounded bg-indigo-600 py-2 text-white hover:bg-indigo-700 disabled:opacity-50">
+            <button type="submit" disabled={isLoading} className="w-full rounded bg-yellow-500 py-2 text-gray-900 hover:bg-yellow-600 disabled:opacity-50">
               {isLoading ? 'Resetting…' : 'Reset password'}
             </button>
           </form>
@@ -91,7 +91,7 @@ function ResetPasswordContent() {
             <label className="mb-1 block text-sm text-gray-300">Email</label>
             <input type="email" value={emailInput} onChange={e => setEmailInput(e.target.value)} required className="w-full rounded bg-gray-700 px-3 py-2 text-white" />
           </div>
-          <button type="submit" disabled={isLoading} className="w-full rounded bg-indigo-600 py-2 text-white hover:bg-indigo-700 disabled:opacity-50">
+          <button type="submit" disabled={isLoading} className="w-full rounded bg-yellow-500 py-2 text-gray-900 hover:bg-yellow-600 disabled:opacity-50">
             {isLoading ? 'Sending…' : 'Send reset link'}
           </button>
         </form>

@@ -70,7 +70,7 @@ export default function CreateServer({ userId, onClose, onSuccess }: Props) {
             placeholder="Enter a server name"
             value={name}
             onChange={e => { if (e.target.value.length <= 30) setName(e.target.value); }}
-            className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
           />
         </div>
 
@@ -97,7 +97,7 @@ export default function CreateServer({ userId, onClose, onSuccess }: Props) {
           <button
             onClick={handleCreate}
             disabled={isLoading || !name.trim()}
-            className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600 disabled:opacity-50"
           >
             {isLoading ? 'Creating…' : 'Create'}
           </button>

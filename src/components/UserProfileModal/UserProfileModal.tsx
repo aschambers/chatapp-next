@@ -27,6 +27,12 @@ interface UserProfile {
   createdAt: string;
 }
 
+interface FriendRequestState {
+  id: number;
+  senderId: number;
+  status: string;
+}
+
 interface Props {
   userId: number;
   username: string;
@@ -34,9 +40,13 @@ interface Props {
   status?: UserStatus;
   isSelf: boolean;
   serverJoinedAt?: string;
+  currentUserId?: number;
   onClose: () => void;
   onSendMessage?: () => void;
   onEditProfile?: () => void;
+  onAddFriend?: () => void;
+  onAcceptRequest?: (requestId: number) => void;
+  onUnfriend?: () => void;
 }
 
 export default function UserProfileModal({
@@ -46,17 +56,34 @@ export default function UserProfileModal({
   status,
   isSelf,
   serverJoinedAt,
+  currentUserId,
   onClose,
   onSendMessage,
   onEditProfile,
+  onAddFriend,
+  onAcceptRequest,
+  onUnfriend,
 }: Props) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [friendRequest, setFriendRequest] = useState<FriendRequestState | null>(null);
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [localStatus, setLocalStatus] = useState<'pending-sent' | 'accepted' | 'removed' | null>(null);
 
   useEffect(() => {
     axios.get(`/api/v1/users?userId=${userId}`)
       .then(r => setProfile(r.data))
       .catch(() => {});
   }, [userId]);
+
+  useEffect(() => {
+    if (!currentUserId || isSelf) return;
+    setRequestLoading(true);
+    axios
+      .get(`/api/v1/friend-requests?senderId=${currentUserId}&receiverId=${userId}`)
+      .then(r => setFriendRequest(r.data ?? null))
+      .catch(() => {})
+      .finally(() => setRequestLoading(false));
+  }, [currentUserId, userId, isSelf]);
 
   const displayImage = profile?.imageUrl ?? imageUrlProp;
   const memberSince = profile?.createdAt ? dayjs(profile.createdAt).format('MMMM D, YYYY') : null;
@@ -72,34 +99,31 @@ export default function UserProfileModal({
       >
         <button
           onClick={onClose}
-          className="absolute top-2 right-3 z-10 text-gray-400 hover:text-white text-xl leading-none"
+          className="absolute top-2 right-3 z-10 text-gray-900/60 hover:text-gray-900 text-xl leading-none"
         >
           ✕
         </button>
 
         {/* Banner */}
-        <div className="h-16 bg-indigo-700" />
+        <div className="h-16 bg-yellow-600" />
 
         <div className="px-5 pb-5">
           {/* Avatar */}
           <div className="relative -mt-8 mb-3 inline-block">
-            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-indigo-600 text-xl font-bold ring-4 ring-gray-800">
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-gray-900 ring-4 ring-gray-600 text-xl font-bold text-white">
               {displayImage
                 ? <img src={displayImage} alt={username} className="h-full w-full object-cover" />
                 : username[0]?.toUpperCase()
               }
             </div>
-            {status && (
-              <span className={`absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-gray-800 ${STATUS_COLOR[status]}`} />
-            )}
           </div>
 
           {/* Action buttons */}
-          <div className="float-right mt-5">
+          <div className="float-right mt-5 flex flex-col gap-2 items-end">
             {!isSelf && onSendMessage && (
               <button
                 onClick={() => { onSendMessage(); onClose(); }}
-                className="rounded bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700"
+                className="rounded bg-yellow-500 px-3 py-1.5 text-sm text-gray-900 hover:bg-yellow-600"
               >
                 Send Message
               </button>
@@ -112,6 +136,43 @@ export default function UserProfileModal({
                 Edit Profile
               </button>
             )}
+            {!isSelf && currentUserId && (() => {
+              const isAccepted = localStatus === 'accepted' || (friendRequest?.status === 'accepted' && localStatus !== 'removed');
+              const isPendingSent = localStatus === 'pending-sent' || (friendRequest?.status === 'pending' && friendRequest.senderId === currentUserId && localStatus !== 'pending-sent');
+              const isPendingIncoming = !localStatus && friendRequest?.status === 'pending' && friendRequest.senderId !== currentUserId;
+              const canAdd = localStatus === 'removed' || (!localStatus && (!friendRequest || friendRequest.status === 'declined' || friendRequest.status === 'removed'));
+
+              if (isAccepted) return (
+                <button
+                  onClick={() => { setLocalStatus('removed'); onUnfriend?.(); }}
+                  className="rounded bg-gray-600 px-3 py-1.5 text-sm text-gray-300 hover:bg-red-600 hover:text-white transition-colors"
+                >
+                  Remove Friend
+                </button>
+              );
+              if (isPendingSent) return (
+                <button disabled className="rounded bg-gray-500 px-3 py-1.5 text-sm text-white cursor-not-allowed opacity-70">
+                  Pending
+                </button>
+              );
+              if (isPendingIncoming) return (
+                <button
+                  onClick={() => { setLocalStatus('accepted'); onAcceptRequest?.(friendRequest!.id); onClose(); }}
+                  className="rounded bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-500"
+                >
+                  Accept
+                </button>
+              );
+              if (canAdd) return (
+                <button
+                  onClick={() => { setLocalStatus('pending-sent'); onAddFriend?.(); }}
+                  className="rounded bg-teal-600 px-3 py-1.5 text-sm text-white hover:bg-teal-500"
+                >
+                  Add Friend
+                </button>
+              );
+              return null;
+            })()}
           </div>
 
           {/* Username */}

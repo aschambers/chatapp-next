@@ -4,17 +4,20 @@ import { useState, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { AppDispatch, useAppSelector } from '@/lib/redux/store';
 import { createChatroom, updateChatroom, reorderChatrooms, deleteChatroom } from '@/lib/redux/modules/chatrooms/chatrooms';
-import { categoryCreate } from '@/lib/redux/modules/categories/categories';
-import type { Chatroom, Category } from '@/lib/types';
+import { categoryCreate, categoryUpdate, categoryDelete } from '@/lib/redux/modules/categories/categories';
+import type { Chatroom, Category, ServerUser } from '@/lib/types';
 import InviteModal from '@/components/InviteModal/InviteModal';
 
 interface Props {
   serverId: number;
   serverName: string;
   isAdmin: boolean;
+  userId: number;
+  serverUserList: ServerUser[];
   activeChatroomId: number | null;
   onSelectChatroom: (chatroom: Chatroom) => void;
   onOpenSettings: () => void;
+  onLeaveServer: () => void;
 }
 
 interface DropIndicator {
@@ -22,7 +25,7 @@ interface DropIndicator {
   before: boolean;
 }
 
-export default function ServerChannelList({ serverId, serverName, isAdmin, activeChatroomId, onSelectChatroom, onOpenSettings }: Props) {
+export default function ServerChannelList({ serverId, serverName, isAdmin, userId, serverUserList, activeChatroomId, onSelectChatroom, onOpenSettings, onLeaveServer }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const { chatrooms } = useAppSelector(s => s.chatroom);
   const { categories } = useAppSelector(s => s.category);
@@ -34,9 +37,16 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
   const [showCreateCategory, setShowCreateCategory] = useState(false);
   const [channelName, setChannelName] = useState('');
   const [channelType, setChannelType] = useState<'text' | 'voice'>('text');
+  const [channelPrivate, setChannelPrivate] = useState(false);
   const [categoryName, setCategoryName] = useState('');
+  const [categoryPrivate, setCategoryPrivate] = useState(false);
   const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+  const [confirmDeleteCategoryId, setConfirmDeleteCategoryId] = useState<number | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const [inviteTarget, setInviteTarget] = useState<{ type: 'channel' | 'category'; id: number; name: string; isPrivate: boolean; allowedUserIds: number[] } | null>(null);
+
+  const isOwner = serverUserList.find(u => u.userId === userId)?.type === 'owner';
 
   const draggedChatroom = useRef<Chatroom | null>(null);
 
@@ -56,10 +66,29 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
 
   const handleCreateChannel = async () => {
     if (channelName.trim().length < 2) return;
-    await dispatch(createChatroom({ name: channelName.trim(), serverId, type: channelType, categoryId: null }));
+    await dispatch(createChatroom({ name: channelName.trim(), serverId, type: channelType, categoryId: null, isPrivate: channelPrivate }));
     setChannelName('');
     setChannelType('text');
+    setChannelPrivate(false);
     setShowCreateChannel(false);
+  };
+
+  const handleTogglePrivate = (chatroomId: number, isPrivate: boolean) => {
+    dispatch(updateChatroom({ chatroomId, isPrivate: !isPrivate }));
+  };
+
+  const handleToggleCategoryPrivate = (categoryId: number, isPrivate: boolean) => {
+    dispatch(categoryUpdate({ categoryId, isPrivate: !isPrivate }));
+  };
+
+  const handleSaveInvite = () => {
+    if (!inviteTarget) return;
+    if (inviteTarget.type === 'channel') {
+      dispatch(updateChatroom({ chatroomId: inviteTarget.id, isPrivate: inviteTarget.isPrivate, allowedUserIds: inviteTarget.allowedUserIds }));
+    } else {
+      dispatch(categoryUpdate({ categoryId: inviteTarget.id, isPrivate: inviteTarget.isPrivate, allowedUserIds: inviteTarget.allowedUserIds }));
+    }
+    setInviteTarget(null);
   };
 
   const handleSlowmode = (chatroomId: number, seconds: number) => {
@@ -68,8 +97,9 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
 
   const handleCreateCategory = async () => {
     if (categoryName.trim().length < 2) return;
-    await dispatch(categoryCreate({ name: categoryName.trim(), serverId, order: categories.length + 1, visible: true }));
+    await dispatch(categoryCreate({ name: categoryName.trim(), serverId, order: categories.length + 1, visible: true, isPrivate: categoryPrivate }));
     setCategoryName('');
+    setCategoryPrivate(false);
     setShowCreateCategory(false);
   };
 
@@ -140,7 +170,12 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
 
   const onDragOver = (e: React.DragEvent) => e.preventDefault();
 
-  const uncategorized = sortedChatrooms.filter(c => c.categoryId == null);
+  const canSee = (isPrivate: boolean | undefined, allowedUserIds: number[] | undefined) =>
+    isAdmin || !isPrivate || (allowedUserIds ?? []).includes(userId);
+
+  const visibleChatrooms = sortedChatrooms.filter(c => canSee(c.isPrivate, c.allowedUserIds));
+  const visibleCategories = (categories as Category[]).filter(cat => canSee(cat.isPrivate, cat.allowedUserIds));
+  const uncategorized = visibleChatrooms.filter(c => c.categoryId == null);
 
   return (
     <div className="flex flex-col h-full">
@@ -162,30 +197,42 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
 
         {showMenu && (
           <div className="absolute left-0 right-0 top-full z-50 bg-gray-900 shadow-lg rounded-b-lg py-1">
-            <button
-              onClick={() => { setShowMenu(false); onOpenSettings(); }}
-              className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
-            >
-              Server Settings
-            </button>
-            <button
-              onClick={() => { setShowMenu(false); setShowInviteModal(true); }}
-              className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
-            >
-              Invite People
-            </button>
-            <button
-              onClick={() => { setShowMenu(false); setShowCreateChannel(true); }}
-              className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
-            >
-              + Create Channel
-            </button>
-            <button
-              onClick={() => { setShowMenu(false); setShowCreateCategory(true); }}
-              className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
-            >
-              + Create Category
-            </button>
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => { setShowMenu(false); onOpenSettings(); }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                  Server Settings
+                </button>
+                <button
+                  onClick={() => { setShowMenu(false); setShowInviteModal(true); }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                  Invite People
+                </button>
+                <button
+                  onClick={() => { setShowMenu(false); setShowCreateChannel(true); }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                  + Create Channel
+                </button>
+                <button
+                  onClick={() => { setShowMenu(false); setShowCreateCategory(true); }}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                  + Create Category
+                </button>
+              </>
+            )}
+            {!isOwner && (
+              <button
+                onClick={() => { setShowMenu(false); setConfirmLeave(true); }}
+                className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-gray-700 hover:text-red-300"
+              >
+                Leave Server
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -211,9 +258,13 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
               <input type="radio" name="type" checked={channelType === 'voice'} onChange={() => setChannelType('voice')} /> Voice
             </label>
           </div>
+          <label className="mb-2 flex items-center gap-2 cursor-pointer text-xs text-gray-300">
+            <input type="checkbox" checked={channelPrivate} onChange={e => setChannelPrivate(e.target.checked)} />
+            🔒 Private channel (admins only)
+          </label>
           <div className="flex gap-2">
             <button onClick={() => setShowCreateChannel(false)} className="flex-1 rounded bg-gray-700 py-1 text-xs text-gray-300 hover:bg-gray-600">Cancel</button>
-            <button onClick={handleCreateChannel} className="flex-1 rounded bg-indigo-600 py-1 text-xs text-white hover:bg-indigo-700">Create</button>
+            <button onClick={handleCreateChannel} className="flex-1 rounded bg-yellow-500 py-1 text-xs text-gray-900 hover:bg-yellow-600">Create</button>
           </div>
         </div>
       )}
@@ -231,9 +282,13 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
             onKeyDown={e => e.key === 'Enter' && handleCreateCategory()}
             className="mb-2 w-full rounded bg-gray-700 px-2 py-1 text-sm text-white outline-none"
           />
+          <label className="mb-2 flex items-center gap-2 cursor-pointer text-xs text-gray-300">
+            <input type="checkbox" checked={categoryPrivate} onChange={e => setCategoryPrivate(e.target.checked)} />
+            🔒 Private category (admins only)
+          </label>
           <div className="flex gap-2">
-            <button onClick={() => setShowCreateCategory(false)} className="flex-1 rounded bg-gray-700 py-1 text-xs text-gray-300 hover:bg-gray-600">Cancel</button>
-            <button onClick={handleCreateCategory} className="flex-1 rounded bg-indigo-600 py-1 text-xs text-white hover:bg-indigo-700">Create</button>
+            <button onClick={() => { setShowCreateCategory(false); setCategoryPrivate(false); }} className="flex-1 rounded bg-gray-700 py-1 text-xs text-gray-300 hover:bg-gray-600">Cancel</button>
+            <button onClick={handleCreateCategory} className="flex-1 rounded bg-yellow-500 py-1 text-xs text-gray-900 hover:bg-yellow-600">Create</button>
           </div>
         </div>
       )}
@@ -262,23 +317,48 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
               isAdmin={isAdmin}
               onDelete={id => setConfirmDeleteId(id)}
               onSlowmode={handleSlowmode}
+              onTogglePrivate={handleTogglePrivate}
+              onInvite={c => setInviteTarget({ type: 'channel', id: c.id, name: c.name, isPrivate: !!c.isPrivate, allowedUserIds: c.allowedUserIds ?? [] })}
             />
           ))}
         </div>
 
         {/* Categories */}
-        {categories.map((cat: Category) => {
-          const catChatrooms = sortedChatrooms.filter(c => c.categoryId === cat.id);
+        {visibleCategories.map((cat: Category) => {
+          const catChatrooms = visibleChatrooms.filter(c => c.categoryId === cat.id);
           const isCollapsed = collapsed.has(cat.id);
           return (
-            <div key={cat.id} className="mt-2">
-              <button
-                onClick={() => toggleCollapse(cat.id)}
-                className="flex w-full items-center gap-1 px-2 py-0.5 text-left text-xs font-bold uppercase tracking-wide text-gray-400 hover:text-gray-200"
-              >
-                <span className="text-[10px]">{isCollapsed ? '▶' : '▼'}</span>
-                {cat.name}
-              </button>
+            <div key={cat.id} className="group/cat mt-2">
+              <div className="flex items-center">
+                <button
+                  onClick={() => toggleCollapse(cat.id)}
+                  className="flex flex-1 items-center gap-1 px-2 py-0.5 text-left text-xs font-bold uppercase tracking-wide text-gray-400 hover:text-gray-200"
+                >
+                  <span className="text-[10px]">{isCollapsed ? '▶' : '▼'}</span>
+                  {cat.name}
+                </button>
+                {isAdmin && (
+                  <div className="flex items-center pr-1 opacity-0 group-hover/cat:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleToggleCategoryPrivate(cat.id, !!cat.isPrivate)}
+                      className={`px-1 text-xs ${cat.isPrivate ? 'text-indigo-400' : 'text-gray-500 hover:text-indigo-400'}`}
+                      title={cat.isPrivate ? 'Make public' : 'Make private'}
+                    >🔒</button>
+                    {cat.isPrivate && (
+                      <button
+                        onClick={() => setInviteTarget({ type: 'category', id: cat.id, name: cat.name, isPrivate: !!cat.isPrivate, allowedUserIds: cat.allowedUserIds ?? [] })}
+                        className="px-1 text-xs text-gray-500 hover:text-yellow-400"
+                        title="Manage access"
+                      >👥</button>
+                    )}
+                    <button
+                      onClick={() => setConfirmDeleteCategoryId(cat.id)}
+                      className="px-1 text-xs text-gray-500 hover:text-red-400"
+                      title="Delete category"
+                    >✕</button>
+                  </div>
+                )}
+              </div>
 
               {!isCollapsed && (
                 <div
@@ -301,6 +381,8 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
                       isAdmin={isAdmin}
                       onDelete={id => setConfirmDeleteId(id)}
               onSlowmode={handleSlowmode}
+              onTogglePrivate={handleTogglePrivate}
+              onInvite={c => setInviteTarget({ type: 'channel', id: c.id, name: c.name, isPrivate: !!c.isPrivate, allowedUserIds: c.allowedUserIds ?? [] })}
                     />
                   ))}
                 </div>
@@ -309,6 +391,20 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
           );
         })}
       </div>
+
+      {/* Leave server confirmation modal */}
+      {confirmLeave && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0">
+          <div className="w-72 rounded-lg bg-gray-800 p-5 shadow-xl">
+            <h3 className="mb-2 text-base font-bold text-white">Leave Server</h3>
+            <p className="mb-5 text-sm text-gray-300">Are you sure you want to leave <span className="font-semibold text-white">{serverName}</span>? You'll need an invite to rejoin.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmLeave(false)} className="flex-1 rounded bg-gray-600 py-2 text-sm text-gray-200 hover:bg-gray-500">Cancel</button>
+              <button onClick={() => { setConfirmLeave(false); onLeaveServer(); }} className="flex-1 rounded bg-red-600 py-2 text-sm text-white hover:bg-red-700">Leave</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete confirmation modal */}
       {confirmDeleteId !== null && (
@@ -334,12 +430,79 @@ export default function ServerChannelList({ serverId, serverName, isAdmin, activ
         </div>
       )}
 
+      {/* Delete category confirmation modal */}
+      {confirmDeleteCategoryId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0">
+          <div className="w-72 rounded-lg bg-gray-800 p-5 shadow-xl">
+            <h3 className="mb-2 text-base font-bold text-white">Delete Category</h3>
+            <p className="mb-5 text-sm text-gray-300">Are you sure you want to delete this category? Channels inside will become uncategorized.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteCategoryId(null)}
+                className="flex-1 rounded bg-gray-600 py-2 text-sm text-gray-200 hover:bg-gray-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { dispatch(categoryDelete(confirmDeleteCategoryId)); setConfirmDeleteCategoryId(null); }}
+                className="flex-1 rounded bg-red-600 py-2 text-sm text-white hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Invite modal */}
       {showInviteModal && (
         <InviteModal
           serverId={serverId}
           onClose={() => setShowInviteModal(false)}
         />
+      )}
+
+      {/* Private access modal */}
+      {inviteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0">
+          <div className="w-80 rounded-lg bg-gray-800 p-5 shadow-xl">
+            <h3 className="mb-1 text-base font-bold text-white">Manage Access</h3>
+            <p className="mb-4 text-xs text-gray-400">
+              🔒 {inviteTarget.name} — select who can see this {inviteTarget.type}
+            </p>
+            <div className="mb-4 max-h-60 overflow-y-auto space-y-1">
+              {serverUserList
+                .filter(u => !['owner', 'admin'].includes(u.type))
+                .map(u => {
+                  const allowed = inviteTarget.allowedUserIds.includes(u.userId);
+                  return (
+                    <label key={u.userId} className="flex cursor-pointer items-center gap-3 rounded px-2 py-1.5 hover:bg-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={allowed}
+                        onChange={() => {
+                          const next = allowed
+                            ? inviteTarget.allowedUserIds.filter(id => id !== u.userId)
+                            : [...inviteTarget.allowedUserIds, u.userId];
+                          setInviteTarget({ ...inviteTarget, allowedUserIds: next });
+                        }}
+                      />
+                      <div className="h-6 w-6 flex-shrink-0 overflow-hidden rounded-full bg-gray-700 flex items-center justify-center text-xs font-bold">
+                        {u.imageUrl ? <img src={u.imageUrl} className="h-full w-full object-cover" alt="" /> : u.username[0]?.toUpperCase()}
+                      </div>
+                      <span className="text-sm text-gray-200">{u.username}</span>
+                      <span className="ml-auto text-xs text-gray-500">{u.type}</span>
+                    </label>
+                  );
+                })}
+            </div>
+            <p className="mb-3 text-xs text-gray-500">Admins and owners always have access.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setInviteTarget(null)} className="flex-1 rounded bg-gray-600 py-2 text-sm text-gray-200 hover:bg-gray-500">Cancel</button>
+              <button onClick={handleSaveInvite} className="flex-1 rounded bg-indigo-600 py-2 text-sm font-semibold text-white hover:bg-indigo-500">Save</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -356,7 +519,7 @@ const SLOWMODE_OPTIONS = [
   { label: '10m', value: 600 },
 ];
 
-function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDragOver, onDrop, showLineBefore, showLineAfter, isAdmin, onDelete, onSlowmode }: {
+function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDragOver, onDrop, showLineBefore, showLineAfter, isAdmin, onDelete, onSlowmode, onTogglePrivate, onInvite }: {
   chatroom: Chatroom;
   active: boolean;
   onSelect: (c: Chatroom) => void;
@@ -369,13 +532,15 @@ function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDrag
   isAdmin: boolean;
   onDelete: (id: number) => void;
   onSlowmode: (id: number, seconds: number) => void;
+  onTogglePrivate: (id: number, isPrivate: boolean) => void;
+  onInvite: (c: Chatroom) => void;
 }) {
   const [showSlowmode, setShowSlowmode] = useState(false);
   const [popupPos, setPopupPos] = useState<{ top: number; left: number } | null>(null);
 
   return (
     <div className="relative group">
-      {showLineBefore && <div className="absolute top-0 left-2 right-2 h-0.5 bg-indigo-400 z-10 rounded" />}
+      {showLineBefore && <div className="absolute top-0 left-2 right-2 h-0.5 bg-yellow-300 z-10 rounded" />}
       <div
         draggable
         onDragStart={() => onDragStart(chatroom)}
@@ -392,6 +557,13 @@ function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDrag
         )}
         {isAdmin && (
           <>
+            <button
+              onClick={e => { e.stopPropagation(); onInvite(chatroom); }}
+              className={`px-1 text-xs ${chatroom.isPrivate ? 'text-indigo-400' : 'hidden group-hover:block text-gray-400 hover:text-indigo-400'}`}
+              title="Channel access"
+            >
+              🔒
+            </button>
             <button
               onClick={e => {
                 e.stopPropagation();
@@ -425,7 +597,7 @@ function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDrag
                 <button
                   key={opt.value}
                   onClick={() => { onSlowmode(chatroom.id, opt.value); setShowSlowmode(false); }}
-                  className={`rounded px-2 py-0.5 ${(chatroom.slowmode ?? 0) === opt.value ? 'bg-indigo-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
+                  className={`rounded px-2 py-0.5 ${(chatroom.slowmode ?? 0) === opt.value ? 'bg-yellow-500 text-gray-900' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}
                 >
                   {opt.label}
                 </button>
@@ -435,7 +607,7 @@ function ChannelRow({ chatroom, active, onSelect, onDragStart, onDragEnd, onDrag
         </>
       )}
 
-      {showLineAfter && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-indigo-400 z-10 rounded" />}
+      {showLineAfter && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-yellow-300 z-10 rounded" />}
     </div>
   );
 }

@@ -30,7 +30,7 @@ export async function PUT(req: NextRequest) {
   const idx = list.findIndex(u => u.userId === userId);
   if (idx < 0) return NextResponse.json({ error: 'User not on server' }, { status: 422 });
 
-  list[idx] = { type, active, userId, imageUrl, username };
+  list[idx] = { type, active, userId: Number(userId), imageUrl, username };
   server.changed('userList', true);
   await server.save();
   return NextResponse.json(server.userList);

@@ -21,6 +21,12 @@ export const friendDelete = createAsyncThunk('friend/delete', async (params: Rec
   return res.data;
 });
 
+export const friendUnfriend = createAsyncThunk('friend/unfriend', async (params: { userId: number; friendId: number }) => {
+  await axios.patch('/api/v1/friends', params);
+  const res = await axios.get('/api/v1/friends', { params: { userId: params.userId } });
+  return res.data;
+});
+
 export const findFriends = createAsyncThunk('friend/findAll', async (userId: number) => {
   const res = await axios.get('/api/v1/friends', { params: { userId } });
   return res.data;
@@ -38,6 +44,8 @@ const friendSlice = createSlice({
     builder.addCase(friendDelete.pending, s => { s.error = false; });
     builder.addCase(friendDelete.fulfilled, (s, a) => { s.friends = a.payload; });
     builder.addCase(friendDelete.rejected, s => { s.error = true; });
+
+    builder.addCase(friendUnfriend.fulfilled, (s, a) => { s.friends = a.payload; });
 
     builder.addCase(findFriends.pending, s => { s.error = false; });
     builder.addCase(findFriends.fulfilled, (s, a) => { s.friends = a.payload; });

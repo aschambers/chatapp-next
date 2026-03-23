@@ -204,7 +204,7 @@ export default function VoiceRoom({ username, activeChatroom, activeChatroomId, 
           ) : (
             voiceUsers.map(user => (
               <div key={user} className="flex items-center gap-3 rounded-lg bg-gray-600 px-3 py-2">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold">
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-900 ring-1 ring-gray-600 text-xs font-bold text-white">
                   {user[0]?.toUpperCase()}
                 </div>
                 <span className="flex-1 text-sm">{user}</span>
@@ -238,7 +238,7 @@ export default function VoiceRoom({ username, activeChatroom, activeChatroomId, 
             <>
               <button
                 onClick={toggleMute}
-                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold text-white transition-colors ${muted ? 'bg-gray-500 hover:bg-gray-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-colors ${muted ? 'bg-gray-500 hover:bg-gray-400 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-gray-900'}`}
               >
                 {muted ? '🔇 Unmute' : '🎤 Mute'}
               </button>

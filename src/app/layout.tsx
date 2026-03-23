@@ -4,7 +4,7 @@ import './globals.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'Sanctrel',
+  title: 'Meshyve',
   description: 'A real-time chat application',
 };
 

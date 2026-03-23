@@ -36,7 +36,7 @@ export default function LoginPage() {
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
-              className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </div>
           <div>
@@ -46,7 +46,7 @@ export default function LoginPage() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </div>
           {error && <p className="text-sm text-red-400">Invalid email or password.</p>}
@@ -59,14 +59,14 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded bg-indigo-600 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="w-full rounded bg-yellow-500 py-2 font-semibold text-gray-900 hover:bg-yellow-600 disabled:opacity-50"
           >
             {isLoading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
         <p className="mt-4 text-center text-sm text-gray-400">
           No account?{' '}
-          <Link href="/signup" className="text-indigo-400 hover:underline">Sign up</Link>
+          <Link href="/signup" className="text-yellow-300 hover:underline">Sign up</Link>
         </p>
         <p className="mt-2 text-center text-sm">
           <Link href="/reset-password" className="text-gray-400 hover:underline text-xs">Forgot password?</Link>

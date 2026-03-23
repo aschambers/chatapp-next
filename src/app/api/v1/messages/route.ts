@@ -128,6 +128,14 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json(messages);
 }
 
+export async function PATCH(req: NextRequest) {
+  const { messageId } = await req.json();
+  const msg = await Message.findByPk(messageId);
+  if (!msg) return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+  await msg.update({ isPinned: !msg.isPinned });
+  return NextResponse.json(msg);
+}
+
 export async function DELETE(req: NextRequest) {
   const { messageId, chatroomId, userId, friendId } = await req.json();
 

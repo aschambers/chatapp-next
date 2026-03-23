@@ -14,6 +14,7 @@ export interface ServerUser {
   imageUrl?: string;
   active?: boolean;
   joinedAt?: string;
+  nameColor?: string | null;
 }
 
 export interface Chatroom {
@@ -24,6 +25,8 @@ export interface Chatroom {
   categoryId?: number;
   position?: number | null;
   slowmode?: number;
+  isPrivate?: boolean;
+  allowedUserIds?: number[];
 }
 
 export interface Friend {
@@ -32,7 +35,9 @@ export interface Friend {
   friendId: number | null;
   groupId: string;
   username: string;
+  imageUrl?: string | null;
   activeFriend: boolean;
+  isFriend?: boolean;
 }
 
 export interface Message {
@@ -44,6 +49,11 @@ export interface Message {
   friendId: number | null;
   updatedAt: string;
   createdAt: string;
+  nameColor?: string | null;
+  reactions?: Record<string, number[]> | null;
+  parentId?: number | null;
+  isPrivate?: boolean;
+  isPinned?: boolean;
 }
 
 export interface Invite {
@@ -62,4 +72,6 @@ export interface Category {
   serverId: number;
   order: number;
   visible: boolean;
+  isPrivate?: boolean;
+  allowedUserIds?: number[];
 }

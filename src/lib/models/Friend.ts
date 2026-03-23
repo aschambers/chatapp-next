@@ -8,6 +8,7 @@ export interface FriendAttributes {
   userId: number;
   friendId: number;
   activeFriend: boolean;
+  isFriend: boolean;
   groupId: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -22,6 +23,7 @@ class Friend extends Model<FriendAttributes, FriendCreationAttributes> implement
   declare userId: number;
   declare friendId: number;
   declare activeFriend: boolean;
+  declare isFriend: boolean;
   declare groupId: string;
   declare createdAt: Date;
   declare updatedAt: Date;
@@ -35,6 +37,7 @@ Friend.init(
     userId: { type: DataTypes.INTEGER, allowNull: false },
     friendId: { type: DataTypes.INTEGER, allowNull: false },
     activeFriend: { type: DataTypes.BOOLEAN, allowNull: false },
+    isFriend: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     groupId: { type: DataTypes.STRING, allowNull: false },
     createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, allowNull: false },
     updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, allowNull: false },

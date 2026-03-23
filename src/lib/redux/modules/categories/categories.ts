@@ -22,6 +22,16 @@ export const categoryFindAll = createAsyncThunk('category/findAll', async (serve
   return res.data;
 });
 
+export const categoryUpdate = createAsyncThunk('category/update', async (params: Record<string, unknown>) => {
+  const res = await axios.put('/api/v1/categories', params);
+  return res.data;
+});
+
+export const categoryDelete = createAsyncThunk('category/delete', async (categoryId: number) => {
+  await axios.delete('/api/v1/categories', { data: { categoryId } });
+  return categoryId;
+});
+
 const categorySlice = createSlice({
   name: 'category',
   initialState,
@@ -34,6 +44,15 @@ const categorySlice = createSlice({
     builder.addCase(categoryFindAll.pending, s => { s.error = false; });
     builder.addCase(categoryFindAll.fulfilled, (s, a) => { s.categories = a.payload; });
     builder.addCase(categoryFindAll.rejected, s => { s.error = true; });
+
+    builder.addCase(categoryUpdate.fulfilled, (s, a) => {
+      const idx = s.categories.findIndex(c => c.id === a.payload.id);
+      if (idx !== -1) s.categories[idx] = a.payload;
+    });
+
+    builder.addCase(categoryDelete.fulfilled, (s, a) => {
+      s.categories = s.categories.filter(c => c.id !== a.payload);
+    });
   },
 });
 

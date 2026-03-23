@@ -100,6 +100,10 @@ const serverSlice = createSlice({
       findBansSuccess: false,
       unbanUserSuccess: false,
     }),
+    patchUserNameColor: (state, action: { payload: { username: string; nameColor: string | null } }) => {
+      const idx = state.serverUserList.findIndex(u => u.username === action.payload.username);
+      if (idx >= 0) state.serverUserList[idx].nameColor = action.payload.nameColor ?? undefined;
+    },
   },
   extraReducers: builder => {
     builder.addCase(createServer.pending, s => { s.isLoading = true; s.error = false; });
@@ -154,5 +158,5 @@ const serverSlice = createSlice({
   },
 });
 
-export const { resetServerValues } = serverSlice.actions;
+export const { resetServerValues, patchUserNameColor } = serverSlice.actions;
 export default serverSlice.reducer;

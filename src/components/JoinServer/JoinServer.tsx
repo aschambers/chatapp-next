@@ -9,12 +9,12 @@ interface Props {
   userId: number;
   email: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (newServerId: number) => void;
 }
 
 export default function JoinServer({ userId, email, onClose, onSuccess }: Props) {
   const dispatch = useDispatch<AppDispatch>();
-  const { isLoading, error } = useAppSelector(s => s.invite);
+  const { isLoading, error, errorMessage } = useAppSelector(s => s.invite);
   const [code, setCode] = useState('');
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -22,7 +22,9 @@ export default function JoinServer({ userId, email, onClose, onSuccess }: Props)
     if (!code.trim()) return;
     const result = await dispatch(inviteVerification({ userId, code, email }));
     if (inviteVerification.fulfilled.match(result)) {
-      onSuccess();
+      const serversList = result.payload as Array<{ serverId: number }>;
+      const joined = serversList[serversList.length - 1];
+      onSuccess(joined?.serverId);
     }
   };
 
@@ -47,10 +49,10 @@ export default function JoinServer({ userId, email, onClose, onSuccess }: Props)
           placeholder="Enter an invite code"
           value={code}
           onChange={e => setCode(e.target.value)}
-          className="mb-4 w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-indigo-500"
+          className="mb-4 w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
         />
 
-        {error && <p className="mb-3 text-sm text-red-400">Invalid or expired invite code.</p>}
+        {error && <p className="mb-3 text-sm text-red-400">{errorMessage ?? 'Invalid or expired invite code.'}</p>}
 
         <div className="flex items-center justify-between">
           <button onClick={onClose} className="text-sm text-gray-400 hover:text-white">
@@ -59,7 +61,7 @@ export default function JoinServer({ userId, email, onClose, onSuccess }: Props)
           <button
             onClick={handleJoin}
             disabled={isLoading || !code.trim()}
-            className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600 disabled:opacity-50"
           >
             {isLoading ? 'Joining…' : 'Join'}
           </button>

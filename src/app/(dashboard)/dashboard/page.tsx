@@ -1,12 +1,23 @@
 import { getSession } from '@/lib/auth';
 import { cookies } from 'next/headers';
+import sequelize from '@/lib/db';
 import User from '@/lib/models/User';
+import '@/lib/models/Server';
+import '@/lib/models/Chatroom';
+import '@/lib/models/Category';
+import '@/lib/models/Message';
+import '@/lib/models/Friend';
+import '@/lib/models/FriendRequest';
+import '@/lib/models/Invite';
 import DashboardClient from '@/components/Dashboard/DashboardClient';
 import type { Server } from '@/lib/types';
 
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session) return null;
+
+  await sequelize.sync({ alter: true }).catch(() => {});
+
   const user = await User.findByPk(session.id);
   const initialServers = (user?.serversList ?? []) as Server[];
 
@@ -28,7 +39,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
-      initialUser={{ ...session, imageUrl: user?.imageUrl ?? null }}
+      initialUser={{ ...session, imageUrl: user?.imageUrl ?? null, nameColor: user?.nameColor ?? session.nameColor ?? null }}
       initialServers={initialServers}
       initialActiveServer={initialActiveServer}
       initialPendingChatroomId={initialPendingChatroomId}

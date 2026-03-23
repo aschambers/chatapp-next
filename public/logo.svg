@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 44" width="220" height="44">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 44" width="240" height="44">
   <style>
     .logo { font: 700 36px/1 system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif; letter-spacing: -1px; }
   </style>
   <text class="logo" x="0" y="36">
-    <tspan fill="#ffffff">sanct</tspan><tspan fill="#6366f1">rel</tspan>
+    <tspan fill="#ffffff">mesh</tspan><tspan fill="#eab308">yve</tspan>
   </text>
 </svg>

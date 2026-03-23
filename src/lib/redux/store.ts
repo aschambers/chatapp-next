@@ -6,6 +6,7 @@ import chatroomReducer from './modules/chatrooms/chatrooms';
 import friendReducer from './modules/friends/friends';
 import inviteReducer from './modules/invites/invites';
 import categoryReducer from './modules/categories/categories';
+import friendRequestReducer from './modules/friendRequests/friendRequests';
 
 export function makeStore() {
   return configureStore({
@@ -16,6 +17,7 @@ export function makeStore() {
       friend: friendReducer,
       invite: inviteReducer,
       category: categoryReducer,
+      friendRequest: friendRequestReducer,
     },
   });
 }

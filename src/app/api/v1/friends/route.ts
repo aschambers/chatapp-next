@@ -38,6 +38,33 @@ export async function POST(req: NextRequest) {
   return NextResponse.json(friends);
 }
 
+export async function PATCH(req: NextRequest) {
+  const { userId, friendId } = await req.json();
+  if (!userId || !friendId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+
+  // Clear isFriend on both sides
+  await Friend.update({ isFriend: false }, { where: { userId: Number(userId), friendId: Number(friendId) } });
+  await Friend.update({ isFriend: false }, { where: { userId: Number(friendId), friendId: Number(userId) } });
+
+  // Reset friend request so they can re-add each other later
+  const { Op } = await import('sequelize');
+  const FriendRequest = (await import('@/lib/models/FriendRequest')).default;
+  await FriendRequest.update(
+    { status: 'removed' },
+    {
+      where: {
+        status: 'accepted',
+        [Op.or]: [
+          { senderId: Number(userId), receiverId: Number(friendId) },
+          { senderId: Number(friendId), receiverId: Number(userId) },
+        ],
+      },
+    }
+  );
+
+  return NextResponse.json({ ok: true });
+}
+
 export async function DELETE(req: NextRequest) {
   const { userId, friendId } = await req.json();
   if (!userId || !friendId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
