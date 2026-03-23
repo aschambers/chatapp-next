@@ -138,7 +138,7 @@ export default function UserProfileModal({
             )}
             {!isSelf && currentUserId && (() => {
               const isAccepted = localStatus === 'accepted' || (friendRequest?.status === 'accepted' && localStatus !== 'removed');
-              const isPendingSent = localStatus === 'pending-sent' || (friendRequest?.status === 'pending' && friendRequest.senderId === currentUserId && localStatus !== 'pending-sent');
+              const isPendingSent = localStatus === 'pending-sent' || (friendRequest?.status === 'pending' && friendRequest.senderId === currentUserId);
               const isPendingIncoming = !localStatus && friendRequest?.status === 'pending' && friendRequest.senderId !== currentUserId;
               const canAdd = localStatus === 'removed' || (!localStatus && (!friendRequest || friendRequest.status === 'declined' || friendRequest.status === 'removed'));
 
