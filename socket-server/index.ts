@@ -3,7 +3,6 @@ import { Server } from 'socket.io';
 import { Op, QueryTypes } from 'sequelize';
 import sequelize from '../src/lib/db';
 import Message from '../src/lib/models/Message';
-import { runMigrations } from '../src/lib/migrate';
 import ServerModel from '../src/lib/models/Server';
 import Chatroom from '../src/lib/models/Chatroom';
 import User from '../src/lib/models/User';
@@ -69,8 +68,7 @@ const voiceChannels = new Map<number, { username: string; socketId: string; room
 // Slowmode: last message timestamp per userId:chatroomId
 const slowmodeTimestamps = new Map<string, number>();
 
-sequelize.sync().then(async () => {
-  await runMigrations();
+sequelize.sync().then(() => {
   console.log('Socket server DB synced');
 
   async function getChatroomMessages(chatroomId: number, requestingUserId?: number) {
