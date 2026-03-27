@@ -16,6 +16,7 @@ export default function Tooltip({ text, children, position = 'top', className = 
 
   const handleMouseEnter = () => {
     if (!ref.current) return;
+    if (window.matchMedia('(hover: none)').matches) return;
     const rect = ref.current.getBoundingClientRect();
     if (position === 'right') {
       setCoords({ x: rect.right + 8, y: rect.top + rect.height / 2 });

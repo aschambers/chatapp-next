@@ -11,7 +11,7 @@ function VerificationContent() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const params = useSearchParams();
-  const { error, isLoading, success, already } = useAppSelector(s => s.user);
+  const { error, isLoading, success, already, resultEmail, noEmail } = useAppSelector(s => s.user);
 
   const called = useRef(false);
   const token = params.get('token');
@@ -45,12 +45,14 @@ function VerificationContent() {
     );
   }
 
-  if (error) {
+  if (error || !token) {
     return (
       <div className="w-full">
         <div className="mx-auto w-full max-w-sm rounded-lg bg-gray-800 p-8 shadow-lg">
-          <h2 className="mb-2 text-lg font-bold text-red-400">Verification failed</h2>
-          <p className="mb-4 text-sm text-gray-300">The link may have expired. Enter your email to resend.</p>
+          {error && <h2 className="mb-2 text-lg font-bold text-red-400">Verification failed</h2>}
+          <p className="mb-4 text-sm text-gray-300">
+            {error ? 'The link may have expired. Enter your email to resend.' : 'Enter your email to receive a verification link.'}
+          </p>
           <input
             type="email"
             value={resendEmail}
@@ -60,10 +62,13 @@ function VerificationContent() {
           />
           <button
             onClick={() => dispatch(sendEmail({ email: resendEmail }))}
-            className="w-full rounded bg-yellow-500 py-2 text-gray-900 hover:bg-yellow-600"
+            disabled={isLoading || resultEmail}
+            className="w-full rounded bg-yellow-500 py-2 text-gray-900 hover:bg-yellow-600 disabled:opacity-50"
           >
-            Resend verification email
+            {isLoading ? 'Sending…' : 'Resend verification email'}
           </button>
+          {resultEmail && <p className="mt-3 text-sm text-green-400">Email sent! Check your inbox.</p>}
+          {noEmail && <p className="mt-3 text-sm text-red-400">Could not send email. Check the address and try again.</p>}
           <Link href="/login" className="mt-3 block text-center text-sm text-gray-400 hover:underline">Back to login</Link>
         </div>
       </div>
@@ -73,7 +78,7 @@ function VerificationContent() {
   return (
     <div className="w-full">
       <div className="text-white">
-        {isLoading ? 'Verifying your account…' : 'Loading…'}
+        Verifying your account…
       </div>
     </div>
   );
