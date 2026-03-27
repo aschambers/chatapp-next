@@ -24,7 +24,8 @@ export async function PUT(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
   await ensureColumns();
-  if (username && username.length > 30) return NextResponse.json({ error: 'Username too long' }, { status: 400 });
+  if (username && username.length > 30)
+    return NextResponse.json({ error: 'Username too long' }, { status: 400 });
 
   const user = await User.findByPk(userId);
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 422 });
@@ -53,7 +54,7 @@ export async function PUT(req: NextRequest) {
       const server = await Server.findByPk(s.serverId);
       if (!server) continue;
       const list = server.userList as Record<string, unknown>[];
-      const idx = list.findIndex(u => u.userId === userId);
+      const idx = list.findIndex((u) => u.userId === userId);
       if (idx >= 0) {
         if (imageUrl) list[idx].imageUrl = imageUrl;
         if (username) list[idx].username = username;

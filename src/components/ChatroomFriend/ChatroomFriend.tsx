@@ -8,8 +8,9 @@ import dayjs from 'dayjs';
 import { getSocket } from '@/lib/socket';
 import type { ForwardedFrom } from '@/lib/types';
 import UserProfileModal from '@/components/UserProfileModal/UserProfileModal';
-import Tooltip from '@/components/Tooltip/Tooltip';
-import MessageContextMenu, { trackEmojiUsage } from '@/components/MessageContextMenu/MessageContextMenu';
+import MessageContextMenu, {
+  trackEmojiUsage,
+} from '@/components/MessageContextMenu/MessageContextMenu';
 import ForwardModal from '@/components/ForwardModal/ForwardModal';
 
 interface Message {
@@ -38,7 +39,13 @@ interface Props {
   onAddFriend?: () => void;
   onAcceptRequest?: (requestId: number) => void;
   onUnfriend?: () => void;
-  onNavigateToChannel?: (serverId: number, chatroomId: number, chatroomName: string, serverName: string, messageId?: number) => void;
+  onNavigateToChannel?: (
+    serverId: number,
+    chatroomId: number,
+    chatroomName: string,
+    serverName: string,
+    messageId?: number
+  ) => void;
   onNavigateToDM?: (groupId: string, messageId?: number) => void;
   scrollToMessageId?: number | null;
   onScrollHandled?: () => void;
@@ -49,7 +56,25 @@ function friendRoom(groupId: string) {
   return `${base}/friends/${groupId}`;
 }
 
-export default function ChatroomFriend({ userId, username, friendUsername, currentUserImageUrl, friendId, groupId, isFriend = false, incomingRequest, onEditProfile, nameColor, onAddFriend, onAcceptRequest, onUnfriend, onNavigateToChannel, onNavigateToDM, scrollToMessageId, onScrollHandled }: Props) {
+export default function ChatroomFriend({
+  userId,
+  username,
+  friendUsername,
+  currentUserImageUrl,
+  friendId,
+  groupId,
+  isFriend = false,
+  incomingRequest,
+  onEditProfile,
+  nameColor,
+  onAddFriend,
+  onAcceptRequest,
+  onUnfriend,
+  onNavigateToChannel,
+  onNavigateToDM,
+  scrollToMessageId,
+  onScrollHandled,
+}: Props) {
   const socket = getSocket();
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -62,7 +87,9 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
   const [newMessage, setNewMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState<number | null>(null);
-  const [profileTarget, setProfileTarget] = useState<{ userId: number; username: string } | null>(null);
+  const [profileTarget, setProfileTarget] = useState<{ userId: number; username: string } | null>(
+    null
+  );
   const [friendImageUrl, setFriendImageUrl] = useState<string | null>(null);
 
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -110,7 +137,9 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [friendReqStatus, setFriendReqStatus] = useState<'none' | 'sent' | 'incoming' | 'friends'>(isFriend ? 'friends' : 'none');
+  const [friendReqStatus, setFriendReqStatus] = useState<'none' | 'sent' | 'incoming' | 'friends'>(
+    isFriend ? 'friends' : 'none'
+  );
   const [friendReqId, setFriendReqId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -121,8 +150,9 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
   // Fetch friend's avatar
   useEffect(() => {
     if (!isPersonal && friendId) {
-      axios.get(`/api/v1/users?userId=${friendId}`)
-        .then(r => setFriendImageUrl(r.data?.imageUrl ?? null))
+      axios
+        .get(`/api/v1/users?userId=${friendId}`)
+        .then((r) => setFriendImageUrl(r.data?.imageUrl ?? null))
         .catch(() => {});
     }
   }, [friendId, isPersonal]);
@@ -148,8 +178,9 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
     } else {
       // Re-check the actual request status now that they're no longer friends
       if (!friendId) return;
-      axios.get(`/api/v1/friend-requests?senderId=${userId}&receiverId=${friendId}`)
-        .then(r => {
+      axios
+        .get(`/api/v1/friend-requests?senderId=${userId}&receiverId=${friendId}`)
+        .then((r) => {
           const req = r.data;
           if (!req || req.status === 'accepted' || req.status === 'removed') {
             setFriendReqStatus('none');
@@ -320,7 +351,7 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
   };
 
   const handleEmojiClick = (emojiData: { native: string }) => {
-    setMessage(prev => prev + emojiData.native);
+    setMessage((prev) => prev + emojiData.native);
   };
 
   const sendReaction = (messageId: number, emoji: string) => {
@@ -345,12 +376,18 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
   };
 
   const filteredMessages = searchQuery.trim()
-    ? messages.filter(m => m.message.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? messages.filter((m) => m.message.toLowerCase().includes(searchQuery.toLowerCase()))
     : messages;
 
   const handleNavigateForwarded = (fw: ForwardedFrom) => {
     if (fw.type === 'channel' && fw.chatroomId && fw.serverId && fw.chatroomName && fw.serverName) {
-      onNavigateToChannel?.(fw.serverId, fw.chatroomId, fw.chatroomName, fw.serverName, fw.messageId);
+      onNavigateToChannel?.(
+        fw.serverId,
+        fw.chatroomId,
+        fw.chatroomName,
+        fw.serverName,
+        fw.messageId
+      );
     } else if (fw.type === 'dm' && fw.groupId) {
       onNavigateToDM?.(fw.groupId, fw.messageId);
     }
@@ -358,32 +395,60 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
 
   const highlight = (text: string) => {
     if (!searchQuery.trim()) return text;
-    const parts = text.split(new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'));
+    const parts = text.split(
+      new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+    );
     return parts.map((part, i) =>
-      part.toLowerCase() === searchQuery.toLowerCase()
-        ? <mark key={i} className="bg-yellow-400/40 text-white rounded px-0.5">{part}</mark>
-        : part
+      part.toLowerCase() === searchQuery.toLowerCase() ? (
+        <mark key={i} className="bg-yellow-400/40 text-white rounded px-0.5">
+          {part}
+        </mark>
+      ) : (
+        part
+      )
     );
   };
 
   return (
     <div className="flex flex-1 flex-col">
+      {/* Mobile overlay to cancel editing by tapping outside */}
+      {editingMessage && (
+        <div
+          className="fixed inset-0 z-[1]"
+          onMouseDown={() => {
+            setEditingMessage(null);
+            setNewMessage('');
+          }}
+          onTouchStart={() => {
+            setEditingMessage(null);
+            setNewMessage('');
+          }}
+        />
+      )}
+
       {/* Top bar */}
       <div className="flex h-12 flex-shrink-0 items-center gap-2 border-b border-gray-600 px-4">
         <span className="text-gray-400">@</span>
         <span className="flex-1 font-semibold">{friendUsername}</span>
         {!isPersonal && friendReqStatus === 'friends' && (
           <button
-            onClick={() => { onUnfriend?.(); setFriendReqStatus('none'); }}
+            onClick={() => {
+              onUnfriend?.();
+              setFriendReqStatus('none');
+            }}
             className="rounded px-2 py-0.5 text-xs font-medium bg-gray-600 hover:bg-red-600 text-gray-300 hover:text-white transition-colors"
           >
             Remove Friend
           </button>
         )}
-        {!isPersonal && friendReqStatus !== 'friends' && (
-          friendReqStatus === 'none' ? (
+        {!isPersonal &&
+          friendReqStatus !== 'friends' &&
+          (friendReqStatus === 'none' ? (
             <button
-              onClick={() => { if (onAddFriend) onAddFriend(); setFriendReqStatus('sent'); }}
+              onClick={() => {
+                if (onAddFriend) onAddFriend();
+                setFriendReqStatus('sent');
+              }}
               className="rounded px-2 py-0.5 text-xs font-medium bg-yellow-500 hover:bg-yellow-600 text-gray-900 transition-colors"
             >
               Add Friend
@@ -394,13 +459,15 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
             </span>
           ) : friendReqStatus === 'incoming' ? (
             <button
-              onClick={() => { if (friendReqId !== null && onAcceptRequest) onAcceptRequest(friendReqId); setFriendReqStatus('friends'); }}
+              onClick={() => {
+                if (friendReqId !== null && onAcceptRequest) onAcceptRequest(friendReqId);
+                setFriendReqStatus('friends');
+              }}
               className="rounded px-2 py-0.5 text-xs font-medium bg-green-600 hover:bg-green-500 text-white transition-colors"
             >
               Accept
             </button>
-          ) : null
-        )}
+          ) : null)}
         {showSearch ? (
           <input
             ref={searchInputRef}
@@ -408,13 +475,21 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
             type="text"
             placeholder="Search messages…"
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Escape') { setShowSearch(false); setSearchQuery(''); } }}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setShowSearch(false);
+                setSearchQuery('');
+              }
+            }}
             className="w-40 rounded bg-gray-700 px-2 py-1 text-sm text-white outline-none focus:ring-1 focus:ring-yellow-400"
           />
         ) : null}
         <button
-          onClick={() => { setShowSearch(v => !v); if (showSearch) setSearchQuery(''); }}
+          onClick={() => {
+            setShowSearch((v) => !v);
+            if (showSearch) setSearchQuery('');
+          }}
           className={`flex items-center justify-center text-lg leading-none translate-y-0.5 ${showSearch ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`}
           title={showSearch ? 'Close search' : 'Search messages'}
         >
@@ -425,197 +500,330 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
       {/* Search result count */}
       {searchQuery.trim() && (
         <div className="border-b border-gray-700 px-4 py-1 text-xs text-gray-400">
-          {filteredMessages.length} result{filteredMessages.length !== 1 ? 's' : ''} for &quot;{searchQuery}&quot;
+          {filteredMessages.length} result{filteredMessages.length !== 1 ? 's' : ''} for &quot;
+          {searchQuery}&quot;
         </div>
       )}
 
       {/* Messages */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
         <div className="flex min-h-full flex-col justify-end p-4">
-        {filteredMessages.map((item, index) => {
-          const msgKey = `message${index}`;
-          const isSelf = item.userId === userId;
-          const senderImage = isSelf ? (currentUserImageUrl ?? null) : friendImageUrl;
-          return (
-            <div
-              key={index}
-              id={msgKey}
-              data-msgid={item.id}
-              className="mb-2 select-none md:select-text"
-              onMouseEnter={() => {
-                if (isTouchRef.current) return;
-                if (!editingMessage && !messageMenu) setHover(msgKey);
-              }}
-              onMouseLeave={() => { if (!messageMenu) setHover(''); }}
-              onTouchStart={e => {
-                isTouchRef.current = true;
-                touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-                longPressRef.current = setTimeout(() => {
-                  setEditMessage(item);
-                  setMobileMenu(true);
-                }, 500);
-              }}
-              onTouchMove={e => {
-                const dx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
-                const dy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
-                if (dx > 8 || dy > 8) {
-                  if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
-                }
-              }}
-              onTouchEnd={() => {
-                if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
-              }}
-            >
-              <div className="flex gap-3">
-                {/* Avatar */}
-                <div
-                  className="flex-shrink-0 mt-1 h-9 w-9 rounded-full bg-gray-900 ring-1 ring-gray-600 overflow-hidden flex items-center justify-center text-sm font-bold text-white cursor-pointer"
-                  onClick={() => setProfileTarget({ userId: item.userId, username: item.username })}
-                >
-                  {senderImage
-                    ? <img src={senderImage} alt={item.username} className="h-full w-full object-cover" loading="eager" />
-                    : item.username[0]?.toUpperCase()
+          {filteredMessages.map((item, index) => {
+            const msgKey = `message${index}`;
+            const isSelf = item.userId === userId;
+            const senderImage = isSelf ? (currentUserImageUrl ?? null) : friendImageUrl;
+            return (
+              <div
+                key={index}
+                id={msgKey}
+                data-msgid={item.id}
+                className="mb-2 select-none md:select-text"
+                onMouseEnter={() => {
+                  if (isTouchRef.current) return;
+                  if (!editingMessage && !messageMenu) setHover(msgKey);
+                }}
+                onMouseLeave={() => {
+                  if (!messageMenu) setHover('');
+                }}
+                onTouchStart={(e) => {
+                  isTouchRef.current = true;
+                  touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                  longPressRef.current = setTimeout(() => {
+                    setEditMessage(item);
+                    setMobileMenu(true);
+                  }, 500);
+                }}
+                onTouchMove={(e) => {
+                  const dx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
+                  const dy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
+                  if (dx > 8 || dy > 8) {
+                    if (longPressRef.current) {
+                      clearTimeout(longPressRef.current);
+                      longPressRef.current = null;
+                    }
                   }
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="font-semibold cursor-pointer hover:underline"
-                      style={{ color: (item.userId === userId ? nameColor : item.nameColor) || '#fde047' }}
-                      onClick={() => setProfileTarget({ userId: item.userId, username: item.username })}
-                    >
-                      {item.username}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      {dayjs(item.updatedAt).format('MM/DD/YYYY')}
-                    </span>
-                    {hover === msgKey && (
-                      <div className="ml-auto relative flex items-center gap-1">
-                        <button
-                          className="text-gray-400 hover:text-white"
-                          onClick={() => setReactionPickerMessageId(id => id === item.id ? null : item.id)}
-                        >
-                          😊
-                        </button>
-                        <button
-                          className="text-gray-400 hover:text-white"
-                          onClick={() => { setForwardItem({ text: item.message, id: item.id }); setHover(''); }}
-                          title="Forward"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
-                        </button>
-                        <button
-                          className="text-gray-400 hover:text-white px-1 text-lg leading-none"
-                          onClick={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setMenuFlip(window.innerHeight - rect.bottom < 220);
-                            setEditMessage(item);
-                            setMessageMenu(m => !m);
-                          }}
-                        >
-                          ···
-                        </button>
-                        {messageMenu && editMessage?.id === item.id && (
-                          <div ref={menuRef} className={`absolute right-0 z-50 w-52 rounded-md bg-gray-800 border border-gray-600 shadow-xl py-1 select-none ${menuFlip ? 'bottom-7' : 'top-7'}`}>
-                            {isSelf && (
-                              <button
-                                className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                                onClick={() => { setEditingMessage(editMessage!); setNewMessage(editMessage!.message); setHover(''); setEditMessage(null); setMessageMenu(false); }}
-                              >
-                                Edit Message
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                              </button>
-                            )}
-                            <button
-                              className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                              onClick={() => { setForwardItem({ text: item.message, id: item.id }); setMessageMenu(false); setEditMessage(null); }}
-                            >
-                              Forward
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
-                            </button>
-                            <button
-                              className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                              onClick={() => { navigator.clipboard.writeText(item.message); setMessageMenu(false); setEditMessage(null); }}
-                            >
-                              Copy Text
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                            </button>
-                            {isSelf && (
-                              <button
-                                className="flex w-full items-center justify-between px-3 py-2 text-sm text-red-400 hover:bg-gray-700"
-                                onClick={() => { deleteUserMessage(item); setMessageMenu(false); setEditMessage(null); }}
-                              >
-                                Delete Message
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                }}
+                onTouchEnd={() => {
+                  if (longPressRef.current) {
+                    clearTimeout(longPressRef.current);
+                    longPressRef.current = null;
+                  }
+                }}
+              >
+                <div className="flex gap-3">
+                  {/* Avatar */}
+                  <div
+                    className="flex-shrink-0 mt-1 h-9 w-9 rounded-full bg-gray-900 ring-1 ring-gray-600 overflow-hidden flex items-center justify-center text-sm font-bold text-white cursor-pointer"
+                    onClick={() =>
+                      setProfileTarget({ userId: item.userId, username: item.username })
+                    }
+                  >
+                    {senderImage ? (
+                      <img
+                        src={senderImage}
+                        alt={item.username}
+                        className="h-full w-full object-cover"
+                        loading="eager"
+                      />
+                    ) : (
+                      item.username[0]?.toUpperCase()
                     )}
                   </div>
 
-                  {/* Message body or edit input */}
-                  {editingMessage?.id === item.id ? (
-                    <div>
-                      <input
-                        className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm"
-                        value={newMessage}
-                        onChange={e => {
-                          if (e.target.value.length < 500) setNewMessage(e.target.value);
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="font-semibold cursor-pointer hover:underline"
+                        style={{
+                          color: (item.userId === userId ? nameColor : item.nameColor) || '#fde047',
                         }}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter' && !e.shiftKey) sendEditedMessage();
-                        }}
-                        onBlur={() => { setEditingMessage(null); setNewMessage(''); }}
-                      />
-                      <p className="text-xs text-gray-400">escape to cancel • enter to save</p>
-                    </div>
-                  ) : (
-                    <>
-                      {item.forwardedFrom && (
-                        <button
-                          onClick={() => handleNavigateForwarded(item.forwardedFrom!)}
-                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-yellow-400 mt-0.5 mb-1 transition-colors"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
-                          <span>
-                            {item.forwardedFrom.type === 'channel'
-                              ? `Forwarded from #${item.forwardedFrom.chatroomName} in ${item.forwardedFrom.serverName}`
-                              : `Forwarded from @${item.forwardedFrom.username}`}
-                          </span>
-                        </button>
-                      )}
-                      {/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(item.message) ? (
-                        <img src={item.message} alt="uploaded" className="mt-1 max-w-xs max-h-64 rounded-lg object-contain" />
-                      ) : (
-                        <p className="text-sm text-gray-200">{highlight(item.message)}</p>
-                      )}
-                      {item.reactions && Object.keys(item.reactions).length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {Object.entries(item.reactions).map(([emoji, userIds]) => (
-                            <button
-                              key={emoji}
-                              onClick={() => sendReaction(item.id, emoji)}
-                              className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                                userIds.includes(userId)
-                                  ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-300'
-                                  : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-400'
-                              }`}
+                        onClick={() =>
+                          setProfileTarget({ userId: item.userId, username: item.username })
+                        }
+                      >
+                        {item.username}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        {dayjs(item.updatedAt).format('MM/DD/YYYY')}
+                      </span>
+                      {hover === msgKey && (
+                        <div className="ml-auto relative flex items-center gap-1">
+                          <button
+                            className="text-gray-400 hover:text-white"
+                            onClick={() =>
+                              setReactionPickerMessageId((id) => (id === item.id ? null : item.id))
+                            }
+                          >
+                            😊
+                          </button>
+                          <button
+                            className="text-gray-400 hover:text-white"
+                            onClick={() => {
+                              setForwardItem({ text: item.message, id: item.id });
+                              setHover('');
+                            }}
+                            title="Forward"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
                             >
-                              {emoji} {userIds.length}
-                            </button>
-                          ))}
+                              <polyline points="15 17 20 12 15 7" />
+                              <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
+                            </svg>
+                          </button>
+                          <button
+                            className="text-gray-400 hover:text-white px-1 text-lg leading-none"
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setMenuFlip(window.innerHeight - rect.bottom < 220);
+                              setEditMessage(item);
+                              setMessageMenu((m) => !m);
+                            }}
+                          >
+                            ···
+                          </button>
+                          {messageMenu && editMessage?.id === item.id && (
+                            <div
+                              ref={menuRef}
+                              className={`absolute right-0 z-50 w-52 rounded-md bg-gray-800 border border-gray-600 shadow-xl py-1 select-none ${menuFlip ? 'bottom-7' : 'top-7'}`}
+                            >
+                              {isSelf && (
+                                <button
+                                  className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
+                                  onClick={() => {
+                                    setEditingMessage(editMessage!);
+                                    setNewMessage(editMessage!.message);
+                                    setHover('');
+                                    setEditMessage(null);
+                                    setMessageMenu(false);
+                                  }}
+                                >
+                                  Edit Message
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4 text-gray-400"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                </button>
+                              )}
+                              <button
+                                className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
+                                onClick={() => {
+                                  setForwardItem({ text: item.message, id: item.id });
+                                  setMessageMenu(false);
+                                  setEditMessage(null);
+                                }}
+                              >
+                                Forward
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4 text-gray-400"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="15 17 20 12 15 7" />
+                                  <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
+                                </svg>
+                              </button>
+                              <button
+                                className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(item.message);
+                                  setMessageMenu(false);
+                                  setEditMessage(null);
+                                }}
+                              >
+                                Copy Text
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4 text-gray-400"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                </svg>
+                              </button>
+                              {isSelf && (
+                                <button
+                                  className="flex w-full items-center justify-between px-3 py-2 text-sm text-red-400 hover:bg-gray-700"
+                                  onClick={() => {
+                                    deleteUserMessage(item);
+                                    setMessageMenu(false);
+                                    setEditMessage(null);
+                                  }}
+                                >
+                                  Delete Message
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                    <path d="M10 11v6M14 11v6" />
+                                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
-                    </>
-                  )}
+                    </div>
+
+                    {/* Message body or edit input */}
+                    {editingMessage?.id === item.id ? (
+                      <div className="relative z-[2]">
+                        <input
+                          className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm"
+                          value={newMessage}
+                          enterKeyHint="go"
+                          onChange={(e) => {
+                            if (e.target.value.length < 500) setNewMessage(e.target.value);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) sendEditedMessage();
+                          }}
+                          onBlur={() => {
+                            setEditingMessage(null);
+                            setNewMessage('');
+                          }}
+                        />
+                        <p className="text-xs text-gray-400">
+                          <span className="hidden md:inline">escape to cancel • </span>enter to save
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {item.forwardedFrom && (
+                          <button
+                            onClick={() => handleNavigateForwarded(item.forwardedFrom!)}
+                            className="flex items-center gap-1 text-xs text-gray-400 hover:text-yellow-400 mt-0.5 mb-1 transition-colors"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-3 w-3"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="15 17 20 12 15 7" />
+                              <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
+                            </svg>
+                            <span>
+                              {item.forwardedFrom.type === 'channel'
+                                ? `Forwarded from #${item.forwardedFrom.chatroomName} in ${item.forwardedFrom.serverName}`
+                                : `Forwarded from @${item.forwardedFrom.username}`}
+                            </span>
+                          </button>
+                        )}
+                        {/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(
+                          item.message
+                        ) ? (
+                          <img
+                            src={item.message}
+                            alt="uploaded"
+                            className="mt-1 max-w-xs max-h-64 rounded-lg object-contain"
+                          />
+                        ) : (
+                          <p className="text-sm text-gray-200">{highlight(item.message)}</p>
+                        )}
+                        {item.reactions && Object.keys(item.reactions).length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {Object.entries(item.reactions).map(([emoji, userIds]) => (
+                              <button
+                                key={emoji}
+                                onClick={() => sendReaction(item.id, emoji)}
+                                className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                                  userIds.includes(userId)
+                                    ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-300'
+                                    : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-400'
+                                }`}
+                              >
+                                {emoji} {userIds.length}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       </div>
 
@@ -653,9 +861,23 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
             if (!url) return;
             const isSelf = friendId === null || friendId === userId;
             if (isSelf) {
-              socket.emit('SEND_PERSONAL_MESSAGE', { username, message: url, userId, friendId: userId, room: friendRoom(groupId), nameColor });
+              socket.emit('SEND_PERSONAL_MESSAGE', {
+                username,
+                message: url,
+                userId,
+                friendId: userId,
+                room: friendRoom(groupId),
+                nameColor,
+              });
             } else {
-              socket.emit('SEND_PRIVATE_MESSAGE', { username, message: url, userId, friendId, room: friendRoom(groupId), nameColor });
+              socket.emit('SEND_PRIVATE_MESSAGE', {
+                username,
+                message: url,
+                userId,
+                friendId,
+                room: friendRoom(groupId),
+                nameColor,
+              });
             }
             e.target.value = '';
           }}
@@ -663,7 +885,7 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
         <div className="relative">
           <button
             className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-gray-500 hover:text-white text-lg font-bold leading-none transition-colors"
-            onClick={() => setShowPlusMenu(p => !p)}
+            onClick={() => setShowPlusMenu((p) => !p)}
           >
             +
           </button>
@@ -671,7 +893,10 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
             <div className="absolute bottom-10 left-0 z-50 w-44 rounded-lg bg-gray-900 py-1 shadow-xl border border-gray-700">
               <button
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
-                onClick={() => { setShowPlusMenu(false); fileInputRef.current?.click(); }}
+                onClick={() => {
+                  setShowPlusMenu(false);
+                  fileInputRef.current?.click();
+                }}
               >
                 📁 Upload a File
               </button>
@@ -682,16 +907,16 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
           className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none"
           placeholder="Send a message!"
           value={message}
-          onChange={e => {
+          onChange={(e) => {
             if (e.target.value.length < 500) setMessage(e.target.value);
           }}
-          onKeyDown={e => {
+          onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) sendMessage();
           }}
         />
         <button
           className="text-gray-400 hover:text-white"
-          onClick={() => setShowEmojiPicker(p => !p)}
+          onClick={() => setShowEmojiPicker((p) => !p)}
         >
           😊
         </button>
@@ -699,17 +924,23 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
       {mobileMenu && editMessage && (
         <MessageContextMenu
           isSelf={editMessage.userId === userId}
-          onReact={emoji => sendReaction(editMessage.id, emoji)}
+          onReact={(emoji) => sendReaction(editMessage.id, emoji)}
           onMoreReact={() => setReactionPickerMessageId(editMessage.id)}
           onEdit={() => {
             setEditingMessage(editMessage);
             setNewMessage(editMessage.message);
             setHover('');
           }}
-          onDelete={() => { deleteUserMessage(); setMobileMenu(false); }}
+          onDelete={() => {
+            deleteUserMessage();
+            setMobileMenu(false);
+          }}
           onCopy={() => navigator.clipboard.writeText(editMessage.message)}
           onForward={() => setForwardItem({ text: editMessage.message, id: editMessage.id })}
-          onClose={() => { setMobileMenu(false); setEditMessage(null); }}
+          onClose={() => {
+            setMobileMenu(false);
+            setEditMessage(null);
+          }}
         />
       )}
       {forwardItem !== null && (
@@ -718,7 +949,14 @@ export default function ChatroomFriend({ userId, username, friendUsername, curre
           userId={userId}
           username={username}
           nameColor={nameColor}
-          sourceContext={{ type: 'dm', groupId, username: friendUsername, messageId: forwardItem.id } as ForwardedFrom}
+          sourceContext={
+            {
+              type: 'dm',
+              groupId,
+              username: friendUsername,
+              messageId: forwardItem.id,
+            } as ForwardedFrom
+          }
           onNavigateToChannel={onNavigateToChannel}
           onNavigateToDM={onNavigateToDM}
           onClose={() => setForwardItem(null)}

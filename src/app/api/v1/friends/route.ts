@@ -22,14 +22,32 @@ export async function POST(req: NextRequest) {
 
   const friendFinder = await Friend.findOne({ where: { [Op.and]: [{ userId }, { friendId }] } });
   if (!friendFinder) {
-    await Friend.create({ username, imageUrl, userId, friendId, activeFriend: true, groupId, isFriend: false });
+    await Friend.create({
+      username,
+      imageUrl,
+      userId,
+      friendId,
+      activeFriend: true,
+      groupId,
+      isFriend: false,
+    });
   } else {
     await friendFinder.update({ activeFriend: true }, { where: { id: friendFinder.id } });
   }
 
-  const userFinder = await Friend.findOne({ where: { [Op.and]: [{ userId: friendId }, { friendId: userId }] } });
+  const userFinder = await Friend.findOne({
+    where: { [Op.and]: [{ userId: friendId }, { friendId: userId }] },
+  });
   if (!userFinder) {
-    await Friend.create({ username: friendUsername, imageUrl, userId: friendId, friendId: userId, activeFriend: true, groupId, isFriend: false });
+    await Friend.create({
+      username: friendUsername,
+      imageUrl,
+      userId: friendId,
+      friendId: userId,
+      activeFriend: true,
+      groupId,
+      isFriend: false,
+    });
   } else {
     await userFinder.update({ activeFriend: true }, { where: { id: userFinder.id } });
   }
@@ -40,11 +58,18 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const { userId, friendId } = await req.json();
-  if (!userId || !friendId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (!userId || !friendId)
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 
   // Clear isFriend on both sides
-  await Friend.update({ isFriend: false }, { where: { userId: Number(userId), friendId: Number(friendId) } });
-  await Friend.update({ isFriend: false }, { where: { userId: Number(friendId), friendId: Number(userId) } });
+  await Friend.update(
+    { isFriend: false },
+    { where: { userId: Number(userId), friendId: Number(friendId) } }
+  );
+  await Friend.update(
+    { isFriend: false },
+    { where: { userId: Number(friendId), friendId: Number(userId) } }
+  );
 
   // Reset friend request so they can re-add each other later
   const { Op } = await import('sequelize');
@@ -67,7 +92,8 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const { userId, friendId } = await req.json();
-  if (!userId || !friendId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (!userId || !friendId)
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 
   const friend = await Friend.findOne({ where: { [Op.and]: [{ userId }, { friendId }] } });
   if (!friend) return NextResponse.json({ error: 'Friend not found' }, { status: 422 });

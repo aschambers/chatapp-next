@@ -25,7 +25,21 @@ export interface UserAttributes {
   updatedAt?: Date;
 }
 
-type UserCreationAttributes = Optional<UserAttributes, 'id' | 'imageUrl' | 'nameColor' | 'description' | 'emojiUsage' | 'resetPasswordToken' | 'pushNotificationToken' | 'privateMessages' | 'personalMessages' | 'chatroomsList' | 'serversList' | 'token'>;
+type UserCreationAttributes = Optional<
+  UserAttributes,
+  | 'id'
+  | 'imageUrl'
+  | 'nameColor'
+  | 'description'
+  | 'emojiUsage'
+  | 'resetPasswordToken'
+  | 'pushNotificationToken'
+  | 'privateMessages'
+  | 'personalMessages'
+  | 'chatroomsList'
+  | 'serversList'
+  | 'token'
+>;
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   declare id: number;

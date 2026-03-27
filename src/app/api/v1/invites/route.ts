@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const { expires, serverId, email } = await req.json();
-  if (!expires || !serverId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (!expires || !serverId)
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 
   const token = crypto.randomBytes(12).toString('hex');
   const code = 'invite-' + crypto.randomBytes(12).toString('hex');
@@ -41,7 +42,8 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   const { inviteId, serverId } = await req.json();
-  if (!inviteId || !serverId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (!inviteId || !serverId)
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   await Invite.destroy({ where: { id: inviteId } });
   const invites = await Invite.findAll({ where: { serverId } });
   return NextResponse.json(invites);
@@ -64,24 +66,37 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 422 });
 
   const bans = (server.userBans ?? []) as Record<string, unknown>[];
-  if (bans.some(b => b.userId === userId)) {
+  if (bans.some((b) => b.userId === userId)) {
     return NextResponse.json({ error: 'You are banned from this server' }, { status: 422 });
   }
 
   if (!user.serversList) user.serversList = [];
   const sList = user.serversList as Record<string, unknown>[];
-  if (sList.some(s => s.serverId === server.id)) {
+  if (sList.some((s) => s.serverId === server.id)) {
     return NextResponse.json({ error: 'You have already joined this server' }, { status: 422 });
   }
 
-  sList.push({ serverId: server.id, name: server.name, imageUrl: server.imageUrl, region: server.region, active: true });
+  sList.push({
+    serverId: server.id,
+    name: server.name,
+    imageUrl: server.imageUrl,
+    region: server.region,
+    active: true,
+  });
   user.changed('serversList', true);
   await user.save();
 
   if (!server.userList) server.userList = [];
   const uList = server.userList as Record<string, unknown>[];
-  if (!uList.some(u => u.userId === user.id)) {
-    uList.push({ userId: user.id, username: user.username, imageUrl: user.imageUrl, type: 'user', active: true, joinedAt: new Date().toISOString() });
+  if (!uList.some((u) => u.userId === user.id)) {
+    uList.push({
+      userId: user.id,
+      username: user.username,
+      imageUrl: user.imageUrl,
+      type: 'user',
+      active: true,
+      joinedAt: new Date().toISOString(),
+    });
     server.changed('userList', true);
     await server.save();
   }

@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   const { token, password } = await req.json();
-  if (!token || !password) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (!token || !password)
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 
   const user = await User.findOne({ where: { resetPasswordToken: token } });
   if (!user) return NextResponse.json({ error: 'Error resetting password' }, { status: 422 });

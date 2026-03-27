@@ -18,9 +18,23 @@ export interface MessageAttributes {
   updatedAt?: Date;
 }
 
-type MessageCreationAttributes = Optional<MessageAttributes, 'id' | 'friendId' | 'chatroomId' | 'nameColor' | 'reactions' | 'parentId' | 'isPrivate' | 'isPinned' | 'forwardedFrom'>;
+type MessageCreationAttributes = Optional<
+  MessageAttributes,
+  | 'id'
+  | 'friendId'
+  | 'chatroomId'
+  | 'nameColor'
+  | 'reactions'
+  | 'parentId'
+  | 'isPrivate'
+  | 'isPinned'
+  | 'forwardedFrom'
+>;
 
-class Message extends Model<MessageAttributes, MessageCreationAttributes> implements MessageAttributes {
+class Message
+  extends Model<MessageAttributes, MessageCreationAttributes>
+  implements MessageAttributes
+{
   declare id: number;
   declare username: string;
   declare message: string;

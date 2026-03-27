@@ -13,13 +13,17 @@ export default async function DashboardPage() {
 
   let initialActiveServer: Server | null = null;
   let initialPendingChatroomId: number | null = null;
+  let initialSidebarWidth = 256;
   try {
     const cookieStore = await cookies();
+    const sw = cookieStore.get('sidebarWidth')?.value;
+    if (sw) initialSidebarWidth = Math.min(400, Math.max(160, parseInt(sw, 10)));
     const raw = cookieStore.get('dashboard_selection')?.value;
     if (raw) {
       const sel = JSON.parse(decodeURIComponent(raw));
       if (sel?.serverId) {
-        initialActiveServer = initialServers.find((s: Server) => s.serverId === sel.serverId) ?? null;
+        initialActiveServer =
+          initialServers.find((s: Server) => s.serverId === sel.serverId) ?? null;
       }
       if (initialActiveServer && sel.type === 'chatroom' && sel.chatroomId) {
         initialPendingChatroomId = sel.chatroomId;
@@ -29,10 +33,16 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
-      initialUser={{ ...session, imageUrl: user?.imageUrl ?? null, nameColor: user?.nameColor ?? session.nameColor ?? null, description: user?.description ?? null }}
+      initialUser={{
+        ...session,
+        imageUrl: user?.imageUrl ?? null,
+        nameColor: user?.nameColor ?? session.nameColor ?? null,
+        description: user?.description ?? null,
+      }}
       initialServers={initialServers}
       initialActiveServer={initialActiveServer}
       initialPendingChatroomId={initialPendingChatroomId}
+      initialSidebarWidth={initialSidebarWidth}
     />
   );
 }

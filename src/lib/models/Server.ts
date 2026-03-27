@@ -15,7 +15,10 @@ export interface ServerAttributes {
   updatedAt?: Date;
 }
 
-type ServerCreationAttributes = Optional<ServerAttributes, 'id' | 'imageUrl' | 'userList' | 'userBans'>;
+type ServerCreationAttributes = Optional<
+  ServerAttributes,
+  'id' | 'imageUrl' | 'userList' | 'userBans'
+>;
 
 class Server extends Model<ServerAttributes, ServerCreationAttributes> implements ServerAttributes {
   declare id: number;

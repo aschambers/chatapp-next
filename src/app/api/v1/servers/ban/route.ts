@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 422 });
 
   const sList = user.serversList as Record<string, unknown>[];
-  const uIdx = sList.findIndex(s => s.serverId === serverId);
+  const uIdx = sList.findIndex((s) => s.serverId === serverId);
   if (uIdx > -1) sList.splice(uIdx, 1);
   user.changed('serversList', true);
   await user.save();
@@ -20,12 +20,15 @@ export async function POST(req: NextRequest) {
   if (!server) return NextResponse.json({ error: 'Server not found' }, { status: 422 });
 
   const list = server.userList as Record<string, unknown>[];
-  const idx = list.findIndex(u => u.userId === userId);
+  const idx = list.findIndex((u) => u.userId === userId);
   if (idx > -1) list.splice(idx, 1);
 
   if (!server.userBans) server.userBans = [];
   (server.userBans as Record<string, unknown>[]).push({
-    userId: Number(userId), username: user.username, imageUrl: user.imageUrl, type: user.type,
+    userId: Number(userId),
+    username: user.username,
+    imageUrl: user.imageUrl,
+    type: user.type,
   });
 
   server.changed('userList', true);

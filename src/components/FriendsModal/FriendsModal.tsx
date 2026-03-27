@@ -34,7 +34,7 @@ export default function FriendsModal({
   const [tab, setTab] = useState<Tab>('online');
   const [search, setSearch] = useState('');
 
-  const actualFriends = friends.filter(f => f.isFriend && f.friendId !== null);
+  const actualFriends = friends.filter((f) => f.isFriend && f.friendId !== null);
 
   const isOnline = (f: Friend) => {
     const status = onlineUsers.get(f.username);
@@ -42,8 +42,8 @@ export default function FriendsModal({
   };
 
   const filtered = actualFriends
-    .filter(f => tab === 'online' ? isOnline(f) : true)
-    .filter(f => f.username.toLowerCase().includes(search.toLowerCase()));
+    .filter((f) => (tab === 'online' ? isOnline(f) : true))
+    .filter((f) => f.username.toLowerCase().includes(search.toLowerCase()));
 
   const statusColor = (f: Friend) => {
     const s = onlineUsers.get(f.username);
@@ -75,17 +75,19 @@ export default function FriendsModal({
       <div
         className="relative flex w-full max-w-lg flex-col rounded-lg bg-gray-800 shadow-xl overflow-hidden"
         style={{ maxHeight: '80vh' }}
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-700 px-5 py-4">
           <h2 className="text-lg font-bold text-white">Friends</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-white text-xl leading-none">
+            ✕
+          </button>
         </div>
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-gray-700 px-4 pt-2">
-          {tabs.map(t => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
@@ -97,9 +99,11 @@ export default function FriendsModal({
             >
               {t.label}
               {t.count !== undefined && t.count > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
-                  t.id === 'pending' ? 'bg-red-500 text-white' : 'bg-gray-600 text-gray-300'
-                }`}>
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                    t.id === 'pending' ? 'bg-red-500 text-white' : 'bg-gray-600 text-gray-300'
+                  }`}
+                >
                   {t.count}
                 </span>
               )}
@@ -114,7 +118,7 @@ export default function FriendsModal({
               type="text"
               placeholder="Search friends…"
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded bg-gray-700 px-3 py-1.5 text-sm text-white outline-none focus:ring-1 focus:ring-yellow-400 placeholder-gray-500"
             />
           </div>
@@ -126,13 +130,22 @@ export default function FriendsModal({
             pendingRequests.length === 0 ? (
               <p className="py-8 text-center text-sm text-gray-500">No pending friend requests</p>
             ) : (
-              pendingRequests.map(req => (
-                <div key={req.id} className="flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-gray-700">
+              pendingRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-gray-700"
+                >
                   <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-900 ring-1 ring-gray-600 text-sm font-bold text-white">
-                    {req.senderImageUrl
-                      ? <img src={req.senderImageUrl} alt={req.senderUsername} className="h-full w-full object-cover" loading="eager" />
-                      : req.senderUsername[0]?.toUpperCase()
-                    }
+                    {req.senderImageUrl ? (
+                      <img
+                        src={req.senderImageUrl}
+                        alt={req.senderUsername}
+                        className="h-full w-full object-cover"
+                        loading="eager"
+                      />
+                    ) : (
+                      req.senderUsername[0]?.toUpperCase()
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-white truncate">{req.senderUsername}</p>
@@ -162,17 +175,28 @@ export default function FriendsModal({
               {tab === 'online' ? 'No friends online' : 'No friends yet'}
             </p>
           ) : (
-            filtered.map(f => (
-              <div key={f.id} className="flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-gray-700 group">
+            filtered.map((f) => (
+              <div
+                key={f.id}
+                className="flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-gray-700 group"
+              >
                 {/* Avatar + status dot */}
                 <div className="relative flex-shrink-0">
                   <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-gray-900 ring-1 ring-gray-600 text-sm font-bold text-white">
-                    {f.imageUrl
-                      ? <img src={f.imageUrl} alt={f.username} className="h-full w-full object-cover" loading="eager" />
-                      : f.username[0]?.toUpperCase()
-                    }
+                    {f.imageUrl ? (
+                      <img
+                        src={f.imageUrl}
+                        alt={f.username}
+                        className="h-full w-full object-cover"
+                        loading="eager"
+                      />
+                    ) : (
+                      f.username[0]?.toUpperCase()
+                    )}
                   </div>
-                  <span className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-gray-800 ${statusColor(f)}`} />
+                  <span
+                    className={`absolute bottom-0 right-0 h-3 w-3 rounded-full ring-2 ring-gray-800 ${statusColor(f)}`}
+                  />
                 </div>
 
                 {/* Name + status */}
@@ -185,7 +209,10 @@ export default function FriendsModal({
                 <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Tooltip text="Message">
                     <button
-                      onClick={() => { onMessage(f); onClose(); }}
+                      onClick={() => {
+                        onMessage(f);
+                        onClose();
+                      }}
                       className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 text-gray-300 hover:bg-yellow-500 hover:text-gray-900 transition-colors"
                     >
                       💬
@@ -210,8 +237,7 @@ export default function FriendsModal({
             <p className="text-xs text-gray-500">
               {tab === 'online'
                 ? `${actualFriends.filter(isOnline).length} online`
-                : `${actualFriends.length} friend${actualFriends.length !== 1 ? 's' : ''}`
-              }
+                : `${actualFriends.length} friend${actualFriends.length !== 1 ? 's' : ''}`}
             </p>
           </div>
         )}

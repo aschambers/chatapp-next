@@ -13,7 +13,7 @@ interface Props {
 
 export default function CreateServer({ userId, onClose, onSuccess }: Props) {
   const dispatch = useDispatch<AppDispatch>();
-  const { isLoading, error } = useAppSelector(s => s.server);
+  const { isLoading, error } = useAppSelector((s) => s.server);
 
   const [name, setName] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -22,7 +22,9 @@ export default function CreateServer({ userId, onClose, onSuccess }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    return () => { dispatch(resetServerValues()); };
+    return () => {
+      dispatch(resetServerValues());
+    };
   }, [dispatch]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,7 +62,8 @@ export default function CreateServer({ userId, onClose, onSuccess }: Props) {
       <div className="w-full max-w-md rounded-lg bg-gray-800 p-6 shadow-xl">
         <h1 className="mb-2 text-xl font-bold text-white">Create your server</h1>
         <p className="mb-4 text-sm text-gray-400">
-          Creating a server will allow you to set up chatrooms and channels to communicate with others.
+          Creating a server will allow you to set up chatrooms and channels to communicate with
+          others.
         </p>
 
         <div className="mb-4">
@@ -69,7 +72,9 @@ export default function CreateServer({ userId, onClose, onSuccess }: Props) {
             type="text"
             placeholder="Enter a server name"
             value={name}
-            onChange={e => { if (e.target.value.length <= 30) setName(e.target.value); }}
+            onChange={(e) => {
+              if (e.target.value.length <= 30) setName(e.target.value);
+            }}
             className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
           />
         </div>
@@ -80,15 +85,24 @@ export default function CreateServer({ userId, onClose, onSuccess }: Props) {
             onClick={() => fileRef.current?.click()}
             className="flex h-20 w-20 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-gray-700 hover:bg-gray-600"
           >
-            {imageUrl
-              ? <img src={imageUrl} alt="server icon" className="h-full w-full object-cover" />
-              : <span className="text-xs text-gray-400">Upload</span>
-            }
+            {imageUrl ? (
+              <img src={imageUrl} alt="server icon" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-xs text-gray-400">Upload</span>
+            )}
           </div>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
         </div>
 
-        {error && <p className="mb-3 text-sm text-red-400">There was an error creating the server.</p>}
+        {error && (
+          <p className="mb-3 text-sm text-red-400">There was an error creating the server.</p>
+        )}
 
         <div className="flex items-center justify-between">
           <button onClick={onClose} className="text-sm text-gray-400 hover:text-white">

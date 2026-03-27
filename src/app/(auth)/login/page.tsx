@@ -11,7 +11,7 @@ import { useAppSelector } from '@/lib/redux/store';
 export default function LoginPage() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
-  const { error, isLoading, notVerified } = useAppSelector(s => s.user);
+  const { error, isLoading, notVerified } = useAppSelector((s) => s.user);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +34,7 @@ export default function LoginPage() {
             <input
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             />
@@ -44,7 +44,7 @@ export default function LoginPage() {
             <input
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               required
               className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             />
@@ -53,7 +53,9 @@ export default function LoginPage() {
           {notVerified && (
             <p className="text-sm text-yellow-400">
               Account not verified.{' '}
-              <Link href="/verification" className="underline">Resend email</Link>
+              <Link href="/verification" className="underline">
+                Resend email
+              </Link>
             </p>
           )}
           <button
@@ -66,15 +68,23 @@ export default function LoginPage() {
         </form>
         <p className="mt-4 text-center text-sm text-gray-400">
           No account?{' '}
-          <Link href="/signup" className="text-yellow-300 hover:underline">Sign up</Link>
+          <Link href="/signup" className="text-yellow-300 hover:underline">
+            Sign up
+          </Link>
         </p>
         <p className="mt-2 text-center text-sm">
-          <Link href="/reset-password" className="text-gray-400 hover:underline text-xs">Forgot password?</Link>
+          <Link href="/reset-password" className="text-gray-400 hover:underline text-xs">
+            Forgot password?
+          </Link>
         </p>
         <p className="mt-3 text-center text-xs text-gray-500">
-          <Link href="/terms" className="hover:underline">Terms of Service</Link>
-          {' '}·{' '}
-          <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+          <Link href="/terms" className="hover:underline">
+            Terms of Service
+          </Link>{' '}
+          ·{' '}
+          <Link href="/privacy" className="hover:underline">
+            Privacy Policy
+          </Link>
         </p>
       </div>
     </div>

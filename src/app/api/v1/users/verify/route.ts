@@ -8,7 +8,9 @@ export const dynamic = 'force-dynamic';
 export async function PUT(req: NextRequest) {
   const { email, token } = await req.json();
 
-  const alreadyVerified = await User.findOne({ where: { [Op.and]: [{ email }, { isVerified: true }] } });
+  const alreadyVerified = await User.findOne({
+    where: { [Op.and]: [{ email }, { isVerified: true }] },
+  });
   if (alreadyVerified) return NextResponse.json({ already: true });
 
   const user = await User.findOne({ where: { [Op.and]: [{ email }, { token }] } });

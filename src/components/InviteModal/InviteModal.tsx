@@ -53,7 +53,6 @@ export default function InviteModal({ serverId, onClose }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-[5%] sm:px-0"
     >
       <div className="w-full max-w-sm rounded-lg bg-gray-800 p-6 shadow-xl">
-
         {view === 'settings' ? (
           <>
             <h2 className="mb-4 text-lg font-bold text-white">Invite Settings</h2>
@@ -61,10 +60,12 @@ export default function InviteModal({ serverId, onClose }: Props) {
             <div className="mb-4 flex items-center justify-between">
               <span className="text-sm text-gray-300">Instant invite code</span>
               <button
-                onClick={() => setInstantFormat(v => !v)}
+                onClick={() => setInstantFormat((v) => !v)}
                 className={`relative h-6 w-11 rounded-full transition-colors ${instantFormat ? 'bg-yellow-500' : 'bg-gray-600'}`}
               >
-                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${instantFormat ? 'left-5' : 'left-0.5'}`} />
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${instantFormat ? 'left-5' : 'left-0.5'}`}
+                />
               </button>
             </div>
 
@@ -72,7 +73,7 @@ export default function InviteModal({ serverId, onClose }: Props) {
               <label className="mb-1 block text-sm text-gray-300">Expires after</label>
               <select
                 value={expires}
-                onChange={e => setExpires(e.target.value)}
+                onChange={(e) => setExpires(e.target.value)}
                 className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white"
               >
                 <option value="24">24 Hours</option>
@@ -97,9 +98,19 @@ export default function InviteModal({ serverId, onClose }: Props) {
           <>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-bold text-white">
-                {inviteCode === 'sent' ? 'Invite Sent!' : inviteCode ? 'Invite Code' : instantFormat ? 'Create Instant Invite' : 'Send Personal Invite'}
+                {inviteCode === 'sent'
+                  ? 'Invite Sent!'
+                  : inviteCode
+                    ? 'Invite Code'
+                    : instantFormat
+                      ? 'Create Instant Invite'
+                      : 'Send Personal Invite'}
               </h2>
-              <button onClick={() => setView('settings')} className="text-gray-400 hover:text-white" title="Settings">
+              <button
+                onClick={() => setView('settings')}
+                className="text-gray-400 hover:text-white"
+                title="Settings"
+              >
                 ⚙
               </button>
             </div>
@@ -116,7 +127,7 @@ export default function InviteModal({ serverId, onClose }: Props) {
                 <input
                   type="email"
                   value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="friend@example.com"
                   className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-yellow-400"
                 />

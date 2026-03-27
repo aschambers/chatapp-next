@@ -9,7 +9,7 @@ export async function PUT(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'User not found' }, { status: 422 });
 
   const list = user.serversList as Record<string, unknown>[];
-  const idx = list.findIndex(s => s.serverId === serverId);
+  const idx = list.findIndex((s) => s.serverId === serverId);
   if (idx < 0) return NextResponse.json({ error: 'Server not found' }, { status: 422 });
 
   list[idx].active = active;

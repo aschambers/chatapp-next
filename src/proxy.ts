@@ -7,9 +7,10 @@ const AUTH_ONLY_PATHS = ['/dashboard'];
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const isPublic = PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '?'));
-  const isAuthOnly = AUTH_ONLY_PATHS.some(p => pathname.startsWith(p));
-  const isApiAuth = pathname.startsWith('/api/') &&
+  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '?'));
+  const isAuthOnly = AUTH_ONLY_PATHS.some((p) => pathname.startsWith(p));
+  const isApiAuth =
+    pathname.startsWith('/api/') &&
     !pathname.startsWith('/api/v1/users/signup') &&
     !pathname.startsWith('/api/v1/users/login') &&
     !pathname.startsWith('/api/v1/users/verify') &&
@@ -27,7 +28,12 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  if (isPublic && pathname !== '/' && pathname !== '/verification' && pathname !== '/reset-password') {
+  if (
+    isPublic &&
+    pathname !== '/' &&
+    pathname !== '/verification' &&
+    pathname !== '/reset-password'
+  ) {
     const session = await getSessionFromRequest(req);
     if (session) {
       return NextResponse.redirect(new URL('/dashboard', req.url));

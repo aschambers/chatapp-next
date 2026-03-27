@@ -8,7 +8,7 @@ import { userSignup } from '@/lib/redux/modules/users/users';
 
 export default function SignupPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const { error, isLoading, success } = useAppSelector(s => s.user);
+  const { error, isLoading, success } = useAppSelector((s) => s.user);
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -24,8 +24,12 @@ export default function SignupPage() {
       <div className="w-full">
         <div className="rounded-lg bg-gray-800 p-8 text-center text-white shadow-lg">
           <h2 className="mb-2 text-xl font-bold">Check your email</h2>
-          <p className="text-gray-300">We sent a verification link to <strong>{email}</strong>.</p>
-          <Link href="/login" className="mt-4 inline-block text-yellow-300 hover:underline">Back to login</Link>
+          <p className="text-gray-300">
+            We sent a verification link to <strong>{email}</strong>.
+          </p>
+          <Link href="/login" className="mt-4 inline-block text-yellow-300 hover:underline">
+            Back to login
+          </Link>
         </div>
       </div>
     );
@@ -41,7 +45,9 @@ export default function SignupPage() {
             <input
               type="text"
               value={username}
-              onChange={e => { if (e.target.value.length <= 30) setUsername(e.target.value); }}
+              onChange={(e) => {
+                if (e.target.value.length <= 30) setUsername(e.target.value);
+              }}
               required
               className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             />
@@ -51,7 +57,7 @@ export default function SignupPage() {
             <input
               type="email"
               value={email}
-              onChange={e => setEmail(e.target.value)}
+              onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             />
@@ -61,7 +67,7 @@ export default function SignupPage() {
             <input
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value)}
               required
               className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
             />
@@ -77,13 +83,19 @@ export default function SignupPage() {
         </form>
         <p className="mt-4 text-center text-sm text-gray-400">
           Already have an account?{' '}
-          <Link href="/login" className="text-yellow-300 hover:underline">Sign in</Link>
+          <Link href="/login" className="text-yellow-300 hover:underline">
+            Sign in
+          </Link>
         </p>
         <p className="mt-3 text-center text-xs text-gray-500">
           By signing up you agree to our{' '}
-          <Link href="/terms" className="hover:underline">Terms of Service</Link>
-          {' '}and{' '}
-          <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+          <Link href="/terms" className="hover:underline">
+            Terms of Service
+          </Link>{' '}
+          and{' '}
+          <Link href="/privacy" className="hover:underline">
+            Privacy Policy
+          </Link>
         </p>
       </div>
     </div>

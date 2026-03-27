@@ -1,23 +1,25 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import Picker from "@emoji-mart/react";
-import data from "@emoji-mart/data";
-import dayjs from "dayjs";
-import { getSocket } from "@/lib/socket";
-import type { ServerUser, Message, ForwardedFrom } from "@/lib/types";
-import UserProfileModal from "@/components/UserProfileModal/UserProfileModal";
-import Tooltip from "@/components/Tooltip/Tooltip";
-import MessageContextMenu, { trackEmojiUsage } from "@/components/MessageContextMenu/MessageContextMenu";
-import ForwardModal from "@/components/ForwardModal/ForwardModal";
+import { useEffect, useRef, useState } from 'react';
+import Picker from '@emoji-mart/react';
+import data from '@emoji-mart/data';
+import dayjs from 'dayjs';
+import { getSocket } from '@/lib/socket';
+import type { ServerUser, Message, ForwardedFrom } from '@/lib/types';
+import UserProfileModal from '@/components/UserProfileModal/UserProfileModal';
+import Tooltip from '@/components/Tooltip/Tooltip';
+import MessageContextMenu, {
+  trackEmojiUsage,
+} from '@/components/MessageContextMenu/MessageContextMenu';
+import ForwardModal from '@/components/ForwardModal/ForwardModal';
 
-type UserStatus = "online" | "away" | "busy" | "offline";
+type UserStatus = 'online' | 'away' | 'busy' | 'offline';
 
 const STATUS_COLOR: Record<UserStatus, string> = {
-  online: "bg-green-500",
-  away: "bg-yellow-400",
-  busy: "bg-red-500",
-  offline: "bg-gray-500",
+  online: 'bg-green-500',
+  away: 'bg-yellow-400',
+  busy: 'bg-red-500',
+  offline: 'bg-gray-500',
 };
 
 interface Props {
@@ -39,10 +41,17 @@ interface Props {
   onUnfriend?: (userId: number) => void;
   serverImageUrl?: string | null;
   serverName?: string;
-  onNavigateToChannel?: (serverId: number, chatroomId: number, chatroomName: string, serverName: string, messageId?: number) => void;
+  onNavigateToChannel?: (
+    serverId: number,
+    chatroomId: number,
+    chatroomName: string,
+    serverName: string,
+    messageId?: number
+  ) => void;
   onNavigateToDM?: (groupId: string, messageId?: number) => void;
   scrollToMessageId?: number | null;
   onScrollHandled?: () => void;
+  hideMembers?: boolean;
 }
 
 interface ProfileTarget {
@@ -54,15 +63,15 @@ interface ProfileTarget {
 
 function formatMessageTime(dateStr: string): string {
   const d = dayjs(dateStr);
-  const today = dayjs().startOf("day");
-  const yesterday = today.subtract(1, "day");
-  if (d.isAfter(today)) return d.format("h:mm A");
-  if (d.isAfter(yesterday)) return `Yesterday at ${d.format("h:mm A")}`;
-  return d.format("MM/DD/YYYY, h:mm A");
+  const today = dayjs().startOf('day');
+  const yesterday = today.subtract(1, 'day');
+  if (d.isAfter(today)) return d.format('h:mm A');
+  if (d.isAfter(yesterday)) return `Yesterday at ${d.format('h:mm A')}`;
+  return d.format('MM/DD/YYYY, h:mm A');
 }
 
 function roomKey(serverId: number, chatroomId: number) {
-  const base = process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:3001";
+  const base = process.env.NEXT_PUBLIC_SOCKET_URL ?? 'http://localhost:3001';
   return `${base}/chatroom/${serverId}/${chatroomId}`;
 }
 
@@ -89,22 +98,19 @@ export default function Chatroom({
   onNavigateToDM,
   scrollToMessageId,
   onScrollHandled,
+  hideMembers,
 }: Props) {
   const socket = getSocket();
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [profileTarget, setProfileTarget] = useState<ProfileTarget | null>(
-    null,
-  );
-  const [serverUserList, setServerUserList] =
-    useState<ServerUser[]>(serverUserListProp);
+  const [profileTarget, setProfileTarget] = useState<ProfileTarget | null>(null);
+  const [serverUserList, setServerUserList] = useState<ServerUser[]>(serverUserListProp);
   useEffect(() => {
     setServerUserList(serverUserListProp);
   }, [serverUserListProp]);
-  const [localOnlineUsers, setLocalOnlineUsers] =
-    useState<Map<string, UserStatus>>(onlineUsers);
-  const [message, setMessage] = useState("");
-  const [hover, setHover] = useState("");
+  const [localOnlineUsers, setLocalOnlineUsers] = useState<Map<string, UserStatus>>(onlineUsers);
+  const [message, setMessage] = useState('');
+  const [hover, setHover] = useState('');
   const [messageMenu, setMessageMenu] = useState(false);
   const [menuFlip, setMenuFlip] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -113,18 +119,18 @@ export default function Chatroom({
   const [pendingScrollId, setPendingScrollId] = useState<number | null>(null);
   const [editMessage, setEditMessage] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
-  const [newMessage, setNewMessage] = useState("");
+  const [newMessage, setNewMessage] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactionPickerMessageId, setReactionPickerMessageId] = useState<number | null>(null);
   const [activeThread, setActiveThread] = useState<Message | null>(null);
   const [threadMessages, setThreadMessages] = useState<Message[]>([]);
   const [threadCounts, setThreadCounts] = useState<Record<number, number>>({});
-  const [threadMessage, setThreadMessage] = useState("");
-  const [threadHover, setThreadHover] = useState("");
+  const [threadMessage, setThreadMessage] = useState('');
+  const [threadHover, setThreadHover] = useState('');
   const [threadEditingMessage, setThreadEditingMessage] = useState<Message | null>(null);
   const [threadEditMessage, setThreadEditMessage] = useState<Message | null>(null);
   const [threadMessageMenu, setThreadMessageMenu] = useState(false);
-  const [threadNewMessage, setThreadNewMessage] = useState("");
+  const [threadNewMessage, setThreadNewMessage] = useState('');
   const activeThreadRef = useRef<Message | null>(null);
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
@@ -132,21 +138,21 @@ export default function Chatroom({
   const messageInputRef = useRef<HTMLInputElement>(null);
   const openThreadRef = useRef<(msg: Message) => void>(() => {});
   const [isNewThread, setIsNewThread] = useState(false);
-  const [newThreadDraft, setNewThreadDraft] = useState("");
+  const [newThreadDraft, setNewThreadDraft] = useState('');
   const [newThreadPrivate, setNewThreadPrivate] = useState(false);
   const [slowmodeCooldown, setSlowmodeCooldown] = useState(0);
   const slowmodeTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [filterQuery, setFilterQuery] = useState("");
+  const [filterQuery, setFilterQuery] = useState('');
   const [showPinnedPanel, setShowPinnedPanel] = useState(false);
   const [showMobileMembers, setShowMobileMembers] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [sideUserModalOpen, setSideUserModalOpen] = useState(false);
-  const [rightClickedUser, setRightClickedUser] = useState<Message | null>(
-    null,
-  );
-  const [sideRightClickedUser, setSideRightClickedUser] =
-    useState<ServerUser | null>(null);
-  const [confirmModerating, setConfirmModerating] = useState<{ action: 'kick' | 'ban'; user: ServerUser } | null>(null);
+  const [rightClickedUser, setRightClickedUser] = useState<Message | null>(null);
+  const [sideRightClickedUser, setSideRightClickedUser] = useState<ServerUser | null>(null);
+  const [confirmModerating, setConfirmModerating] = useState<{
+    action: 'kick' | 'ban';
+    user: ServerUser;
+  } | null>(null);
   const [myConnection] = useState<RTCPeerConnection | null>(null);
 
   const prevMessageCountRef = useRef<number>(0);
@@ -193,9 +199,9 @@ export default function Chatroom({
     } catch {}
   };
 
-  const socketIdRef = useRef<string>("");
-  const previousRoomRef = useRef<string>("");
-  const currentRoomRef = useRef<string>("");
+  const socketIdRef = useRef<string>('');
+  const previousRoomRef = useRef<string>('');
+  const currentRoomRef = useRef<string>('');
   const menuRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isTouchRef = useRef(false);
@@ -215,19 +221,17 @@ export default function Chatroom({
   }, [onlineUsers]);
 
   useEffect(() => {
-    const handleUsers = (
-      data: { userId: number; username: string; status: string }[],
-    ) => {
+    const handleUsers = (data: { userId: number; username: string; status: string }[]) => {
       const map = new Map<string, UserStatus>();
       data.forEach((u) => {
-        if (u.status !== "offline") map.set(u.username, u.status as UserStatus);
+        if (u.status !== 'offline') map.set(u.username, u.status as UserStatus);
       });
       setLocalOnlineUsers(map);
     };
-    socket.on("RECEIVE_USERS", handleUsers);
-    socket.emit("GET_USERS");
+    socket.on('RECEIVE_USERS', handleUsers);
+    socket.emit('GET_USERS');
     return () => {
-      socket.off("RECEIVE_USERS", handleUsers);
+      socket.off('RECEIVE_USERS', handleUsers);
     };
   }, [socket]);
 
@@ -274,26 +278,26 @@ export default function Chatroom({
         setShowEmojiPicker(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    document.addEventListener("touchstart", handler);
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
     return () => {
-      document.removeEventListener("mousedown", handler);
-      document.removeEventListener("touchstart", handler);
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
     };
   }, []);
 
   // Escape key to cancel edit
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !messageMenu) {
+      if (e.key === 'Escape' && !messageMenu) {
         setEditingMessage(null);
-        setNewMessage("");
+        setNewMessage('');
         setIsNewThread(false);
-        setNewThreadDraft("");
+        setNewThreadDraft('');
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [messageMenu]);
 
   // Socket event listeners
@@ -302,7 +306,7 @@ export default function Chatroom({
       setMessageMenu(false);
       setEditMessage(null);
       setEditingMessage(null);
-      setNewMessage("");
+      setNewMessage('');
       const reversed = [...data].reverse();
       const prev = prevMessageCountRef.current;
       if (prev > 0 && reversed.length > prev) {
@@ -326,9 +330,7 @@ export default function Chatroom({
       }
     };
 
-    const handleIceCandidate = async (data: {
-      candidate: RTCIceCandidateInit;
-    }) => {
+    const handleIceCandidate = async (data: { candidate: RTCIceCandidateInit }) => {
       if (myConnection) {
         await myConnection
           .addIceCandidate(new RTCIceCandidate(data.candidate))
@@ -342,13 +344,13 @@ export default function Chatroom({
         await myConnection.setRemoteDescription(data.desc);
         const answer = await myConnection.createAnswer();
         await myConnection.setLocalDescription(answer);
-        socket.emit("SEND_ANSWER", {
+        socket.emit('SEND_ANSWER', {
           desc: answer,
           username,
           room: roomKey(serverId, activeChatroomId),
         });
       } catch (err) {
-        console.error("Error handling offer:", err);
+        console.error('Error handling offer:', err);
       }
     };
 
@@ -357,7 +359,7 @@ export default function Chatroom({
       try {
         await myConnection.setRemoteDescription(data.desc);
       } catch (err) {
-        console.error("Error handling answer:", err);
+        console.error('Error handling answer:', err);
       }
     };
 
@@ -379,24 +381,24 @@ export default function Chatroom({
     const handleThreadMessages = (data: Message[]) => setThreadMessages([...data].reverse());
     const handleThreadCounts = (data: Record<number, number>) => setThreadCounts(data);
 
-    socket.on("RECEIVE_CHATROOM_MESSAGES", handleMessages);
-    socket.on("RECEIVE_SERVER_LIST", handleServerList);
-    socket.on("RECEIVE_ICE_CANDIDATE", handleIceCandidate);
-    socket.on("RECEIVE_OFFER", handleOffer);
-    socket.on("RECEIVE_ANSWER", handleAnswer);
-    socket.on("SLOWMODE_ERROR", handleSlowmodeError);
-    socket.on("RECEIVE_THREAD_MESSAGES", handleThreadMessages);
-    socket.on("RECEIVE_THREAD_COUNTS", handleThreadCounts);
+    socket.on('RECEIVE_CHATROOM_MESSAGES', handleMessages);
+    socket.on('RECEIVE_SERVER_LIST', handleServerList);
+    socket.on('RECEIVE_ICE_CANDIDATE', handleIceCandidate);
+    socket.on('RECEIVE_OFFER', handleOffer);
+    socket.on('RECEIVE_ANSWER', handleAnswer);
+    socket.on('SLOWMODE_ERROR', handleSlowmodeError);
+    socket.on('RECEIVE_THREAD_MESSAGES', handleThreadMessages);
+    socket.on('RECEIVE_THREAD_COUNTS', handleThreadCounts);
 
     return () => {
-      socket.off("RECEIVE_CHATROOM_MESSAGES", handleMessages);
-      socket.off("RECEIVE_SERVER_LIST", handleServerList);
-      socket.off("RECEIVE_ICE_CANDIDATE", handleIceCandidate);
-      socket.off("RECEIVE_OFFER", handleOffer);
-      socket.off("RECEIVE_ANSWER", handleAnswer);
-      socket.off("SLOWMODE_ERROR", handleSlowmodeError);
-      socket.off("RECEIVE_THREAD_MESSAGES", handleThreadMessages);
-      socket.off("RECEIVE_THREAD_COUNTS", handleThreadCounts);
+      socket.off('RECEIVE_CHATROOM_MESSAGES', handleMessages);
+      socket.off('RECEIVE_SERVER_LIST', handleServerList);
+      socket.off('RECEIVE_ICE_CANDIDATE', handleIceCandidate);
+      socket.off('RECEIVE_OFFER', handleOffer);
+      socket.off('RECEIVE_ANSWER', handleAnswer);
+      socket.off('SLOWMODE_ERROR', handleSlowmodeError);
+      socket.off('RECEIVE_THREAD_MESSAGES', handleThreadMessages);
+      socket.off('RECEIVE_THREAD_COUNTS', handleThreadCounts);
       if (slowmodeTimer.current) clearInterval(slowmodeTimer.current);
     };
   }, [socket, username, myConnection, serverId, activeChatroomId]);
@@ -414,8 +416,8 @@ export default function Chatroom({
     const prevRoom = previousRoomRef.current;
 
     const emitJoin = () => {
-      socketIdRef.current = socket.id ?? "";
-      socket.emit("GET_CHATROOM_MESSAGES", {
+      socketIdRef.current = socket.id ?? '';
+      socket.emit('GET_CHATROOM_MESSAGES', {
         socketId: socket.id,
         chatroomId: activeChatroomId,
         serverId,
@@ -429,8 +431,8 @@ export default function Chatroom({
     if (socket.connected) {
       emitJoin();
     } else {
-      socket.once("connect", () => {
-        socketIdRef.current = socket.id ?? "";
+      socket.once('connect', () => {
+        socketIdRef.current = socket.id ?? '';
         emitJoin();
       });
     }
@@ -438,13 +440,13 @@ export default function Chatroom({
     prevChatroomIdRef.current = activeChatroomId;
 
     return () => {
-      socket.emit("LEAVE_CHATROOMS", { room });
+      socket.emit('LEAVE_CHATROOMS', { room });
     };
   }, [socket, activeChatroomId, serverId]);
 
   const sendMessage = () => {
     if (!message.trim()) return;
-    socket.emit("CHATROOM_MESSAGE", {
+    socket.emit('CHATROOM_MESSAGE', {
       username,
       message,
       userId,
@@ -452,12 +454,12 @@ export default function Chatroom({
       room: roomKey(serverId, activeChatroomId),
       nameColor,
     });
-    setMessage("");
+    setMessage('');
   };
 
   const sendEditedMessage = () => {
     if (!editingMessage) return;
-    socket.emit("EDIT_CHATROOM_MESSAGE", {
+    socket.emit('EDIT_CHATROOM_MESSAGE', {
       username,
       message: newMessage,
       userId,
@@ -470,7 +472,7 @@ export default function Chatroom({
   const deleteChatroomMessage = (msg?: Message) => {
     const target = msg ?? editMessage;
     if (!target) return;
-    socket.emit("DELETE_CHATROOM_MESSAGE", {
+    socket.emit('DELETE_CHATROOM_MESSAGE', {
       username,
       userId,
       chatroomId: activeChatroomId,
@@ -480,20 +482,20 @@ export default function Chatroom({
   };
 
   const kickUser = (user: ServerUser) => {
-    socket.emit("KICK_SERVER_USER", {
+    socket.emit('KICK_SERVER_USER', {
       serverId,
       chatroomId: activeChatroomId,
-      type: "user",
+      type: 'user',
       userId: user.userId,
       room: roomKey(serverId, activeChatroomId),
     });
   };
 
   const banUser = (user: ServerUser) => {
-    socket.emit("BAN_SERVER_USER", {
+    socket.emit('BAN_SERVER_USER', {
       serverId,
       chatroomId: activeChatroomId,
-      type: "user",
+      type: 'user',
       userId: user.userId,
       room: roomKey(serverId, activeChatroomId),
     });
@@ -506,13 +508,13 @@ export default function Chatroom({
         offerToReceiveAudio: true,
       });
       await myConnection.setLocalDescription(offer);
-      socket.emit("SEND_OFFER", {
+      socket.emit('SEND_OFFER', {
         desc: offer,
         username,
         room: roomKey(serverId, activeChatroomId),
       });
     } catch (err) {
-      console.error("Error starting call:", err);
+      console.error('Error starting call:', err);
     }
   };
 
@@ -540,7 +542,7 @@ export default function Chatroom({
   };
 
   const scrollToMessage = (messageId: number) => {
-    const index = messages.findIndex(m => m.id === messageId);
+    const index = messages.findIndex((m) => m.id === messageId);
     if (index === -1) return;
     const el = document.getElementById(`message${index}`);
     if (!el) return;
@@ -559,18 +561,18 @@ export default function Chatroom({
   };
 
   function threadRoomKey(messageId: number) {
-    const base = process.env.NEXT_PUBLIC_SOCKET_URL ?? "http://localhost:3001";
+    const base = process.env.NEXT_PUBLIC_SOCKET_URL ?? 'http://localhost:3001';
     return `${base}/thread/${messageId}`;
   }
 
   const openThread = (msg: Message) => {
     if (activeThreadRef.current && activeThreadRef.current.id !== msg.id) {
-      socket.emit("LEAVE_CHATROOMS", { room: threadRoomKey(activeThreadRef.current.id) });
+      socket.emit('LEAVE_CHATROOMS', { room: threadRoomKey(activeThreadRef.current.id) });
     }
     activeThreadRef.current = msg;
     setActiveThread(msg);
     setThreadMessages([]);
-    socket.emit("GET_THREAD_MESSAGES", {
+    socket.emit('GET_THREAD_MESSAGES', {
       parentId: msg.id,
       room: threadRoomKey(msg.id),
       socketId: socketIdRef.current,
@@ -581,7 +583,13 @@ export default function Chatroom({
 
   const handleNavigateForwarded = (fw: ForwardedFrom) => {
     if (fw.type === 'channel' && fw.chatroomId && fw.serverId && fw.chatroomName && fw.serverName) {
-      onNavigateToChannel?.(fw.serverId, fw.chatroomId, fw.chatroomName, fw.serverName, fw.messageId);
+      onNavigateToChannel?.(
+        fw.serverId,
+        fw.chatroomId,
+        fw.chatroomName,
+        fw.serverName,
+        fw.messageId
+      );
     } else if (fw.type === 'dm' && fw.groupId) {
       onNavigateToDM?.(fw.groupId, fw.messageId);
     }
@@ -589,7 +597,7 @@ export default function Chatroom({
 
   const closeThread = () => {
     if (activeThreadRef.current) {
-      socket.emit("LEAVE_CHATROOMS", { room: threadRoomKey(activeThreadRef.current.id) });
+      socket.emit('LEAVE_CHATROOMS', { room: threadRoomKey(activeThreadRef.current.id) });
     }
     activeThreadRef.current = null;
     setActiveThread(null);
@@ -603,25 +611,29 @@ export default function Chatroom({
 
   const submitNewThread = () => {
     if (!newThreadDraft.trim()) return;
-    socket.emit('CREATE_THREAD', {
-      username,
-      message: newThreadDraft,
-      userId,
-      chatroomId: activeChatroomId,
-      room: currentRoomRef.current,
-      nameColor,
-      isPrivate: newThreadPrivate,
-    }, (newMsg: Message) => {
-      setNewThreadDraft('');
-      setNewThreadPrivate(false);
-      setIsNewThread(false);
-      openThread(newMsg);
-    });
+    socket.emit(
+      'CREATE_THREAD',
+      {
+        username,
+        message: newThreadDraft,
+        userId,
+        chatroomId: activeChatroomId,
+        room: currentRoomRef.current,
+        nameColor,
+        isPrivate: newThreadPrivate,
+      },
+      (newMsg: Message) => {
+        setNewThreadDraft('');
+        setNewThreadPrivate(false);
+        setIsNewThread(false);
+        openThread(newMsg);
+      }
+    );
   };
 
   const sendThreadMessage = () => {
     if (!threadMessage.trim() || !activeThreadRef.current) return;
-    socket.emit("SEND_THREAD_MESSAGE", {
+    socket.emit('SEND_THREAD_MESSAGE', {
       parentId: activeThreadRef.current.id,
       chatroomId: activeChatroomId,
       username,
@@ -631,20 +643,20 @@ export default function Chatroom({
       room: threadRoomKey(activeThreadRef.current.id),
       chatroomRoom: currentRoomRef.current,
     });
-    setThreadMessage("");
+    setThreadMessage('');
   };
 
-  const USER_ROLES = ["owner", "admin", "moderator", "voice", "user"] as const;
+  const USER_ROLES = ['owner', 'admin', 'moderator', 'voice', 'user'] as const;
   const ROLE_LABELS: Record<string, string> = {
-    owner: "Room Owners",
-    admin: "Administrators",
-    moderator: "Moderators",
-    voice: "Voice",
-    user: "Users",
+    owner: 'Room Owners',
+    admin: 'Administrators',
+    moderator: 'Moderators',
+    voice: 'Voice',
+    user: 'Users',
   };
 
   const filteredUsers = serverUserList.filter((u) =>
-    u.username.toLowerCase().includes(filterQuery.toLowerCase()),
+    u.username.toLowerCase().includes(filterQuery.toLowerCase())
   );
 
   return (
@@ -652,12 +664,57 @@ export default function Chatroom({
       {/* Audio elements for WebRTC */}
       <div id="audioElements" className="hidden" />
 
+      {/* Mobile overlay to cancel editing by tapping outside */}
+      {editingMessage && (
+        <div
+          className="fixed inset-0 z-[1]"
+          onMouseDown={() => {
+            setEditingMessage(null);
+            setNewMessage('');
+          }}
+          onTouchStart={() => {
+            setEditingMessage(null);
+            setNewMessage('');
+          }}
+        />
+      )}
+      {threadEditingMessage && (
+        <div
+          className="fixed inset-0 z-[1]"
+          onMouseDown={() => {
+            setThreadEditingMessage(null);
+            setThreadNewMessage('');
+          }}
+          onTouchStart={() => {
+            setThreadEditingMessage(null);
+            setThreadNewMessage('');
+          }}
+        />
+      )}
+
       {/* Chat area */}
       <div className="relative flex flex-1 flex-col">
         {/* Top bar */}
         <div className="flex h-12 items-center gap-2 border-b border-gray-600 px-4 font-semibold">
-          <span className="cursor-pointer text-gray-400" onClick={startCall}>
-            {activeChatroomType === "text" ? "#" : "🔊"}
+          <span className="cursor-pointer text-gray-400 flex items-center" onClick={startCall}>
+            {activeChatroomType === 'text' ? (
+              '#'
+            ) : (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+              </svg>
+            )}
           </span>
           <span className="flex-1 cursor-pointer" onClick={startCall}>
             {activeChatroom}
@@ -665,9 +722,22 @@ export default function Chatroom({
           <Tooltip text="Pinned messages" position="bottom">
             <button
               onClick={() => setShowPinnedPanel((v) => !v)}
-              className={`flex items-center justify-center h-8 w-8 rounded hover:bg-gray-600 text-lg ${showPinnedPanel ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`}
+              className="flex items-center justify-center h-8 w-8 rounded hover:bg-gray-600 text-gray-400 hover:text-white"
             >
-              📌
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 4.5l-4 4-4 1.5-1.5 1.5 7 7 1.5-1.5 1.5-4 4-4z" />
+                <line x1="9" y1="15" x2="4.5" y2="19.5" />
+                <line x1="14.5" y1="4" x2="20" y2="9.5" />
+              </svg>
             </button>
           </Tooltip>
           <Tooltip text="Members" position="bottom">
@@ -675,22 +745,22 @@ export default function Chatroom({
               onClick={() => setShowMobileMembers((v) => !v)}
               className="md:hidden flex items-center justify-center h-8 w-8 rounded bg-gray-600 hover:bg-gray-500 text-white"
             >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-            </svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
             </button>
           </Tooltip>
         </div>
@@ -704,31 +774,31 @@ export default function Chatroom({
                 serverUserList.some(
                   (u) =>
                     u.username === item.username &&
-                    u.type !== "owner" &&
-                    u.type !== "admin" &&
-                    u.username !== username,
+                    u.type !== 'owner' &&
+                    u.type !== 'admin' &&
+                    u.username !== username
                 );
               const msgKey = `message${index}`;
               const senderImage =
                 item.username === username
                   ? (currentUserImageUrl ??
-                    serverUserList.find((u) => u.username === item.username)
-                      ?.imageUrl ??
+                    serverUserList.find((u) => u.username === item.username)?.imageUrl ??
                     null)
-                  : (serverUserList.find((u) => u.username === item.username)
-                      ?.imageUrl ?? null);
+                  : (serverUserList.find((u) => u.username === item.username)?.imageUrl ?? null);
               return (
                 <div
                   key={index}
                   id={msgKey}
                   data-msgid={item.id}
-                  className={`group mb-2 rounded px-2 -mx-2 transition-colors select-none md:select-text ${activeThread?.id === item.id ? "border-l-2 border-yellow-400 pl-3 bg-yellow-400/5" : userId === item.userId || canModerate ? "hover:bg-white/5" : ""}`}
+                  className={`group mb-2 rounded px-2 -mx-2 transition-colors select-none md:select-text ${activeThread?.id === item.id ? 'border-l-2 border-yellow-400 pl-3 bg-yellow-400/5' : userId === item.userId || canModerate ? 'hover:bg-white/5' : ''}`}
                   onMouseEnter={() => {
                     if (isTouchRef.current) return;
                     if (!editingMessage && !messageMenu) setHover(msgKey);
                   }}
-                  onMouseLeave={() => { if (!messageMenu) setHover(""); }}
-                  onTouchStart={e => {
+                  onMouseLeave={() => {
+                    if (!messageMenu) setHover('');
+                  }}
+                  onTouchStart={(e) => {
                     isTouchRef.current = true;
                     touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
                     longPressRef.current = setTimeout(() => {
@@ -737,15 +807,21 @@ export default function Chatroom({
                       setMobileMenu(true);
                     }, 500);
                   }}
-                  onTouchMove={e => {
+                  onTouchMove={(e) => {
                     const dx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
                     const dy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
                     if (dx > 8 || dy > 8) {
-                      if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
+                      if (longPressRef.current) {
+                        clearTimeout(longPressRef.current);
+                        longPressRef.current = null;
+                      }
                     }
                   }}
                   onTouchEnd={() => {
-                    if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
+                    if (longPressRef.current) {
+                      clearTimeout(longPressRef.current);
+                      longPressRef.current = null;
+                    }
                   }}
                 >
                   <div className="flex gap-3 items-start">
@@ -753,9 +829,7 @@ export default function Chatroom({
                     <div
                       className="flex-shrink-0 mt-1 h-9 w-9 rounded-full bg-gray-900 ring-1 ring-gray-600 overflow-hidden flex items-center justify-center text-sm font-bold text-white cursor-pointer"
                       onClick={() => {
-                        const su = serverUserList.find(
-                          (u) => u.username === item.username,
-                        );
+                        const su = serverUserList.find((u) => u.username === item.username);
                         setProfileTarget({
                           userId: item.userId,
                           username: item.username,
@@ -785,22 +859,33 @@ export default function Chatroom({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         {item.isPinned && (
-                          <span className="text-xs text-yellow-400" title="Pinned">📌</span>
+                          <span className="text-gray-400" title="Pinned">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-3 w-3"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M15 4.5l-4 4-4 1.5-1.5 1.5 7 7 1.5-1.5 1.5-4 4-4z" />
+                              <line x1="9" y1="15" x2="4.5" y2="19.5" />
+                              <line x1="14.5" y1="4" x2="20" y2="9.5" />
+                            </svg>
+                          </span>
                         )}
                         <span
                           className="font-semibold cursor-pointer hover:underline"
                           style={{
                             color:
-                              serverUserList.find(
-                                (u) => u.username === item.username,
-                              )?.nameColor ||
+                              serverUserList.find((u) => u.username === item.username)?.nameColor ||
                               item.nameColor ||
-                              "#fde047",
+                              '#fde047',
                           }}
                           onClick={() => {
-                            const su = serverUserList.find(
-                              (u) => u.username === item.username,
-                            );
+                            const su = serverUserList.find((u) => u.username === item.username);
                             setProfileTarget({
                               userId: item.userId,
                               username: item.username,
@@ -822,26 +907,20 @@ export default function Chatroom({
                         </span>
                       </div>
 
-
                       {/* User context modal */}
                       {userModalOpen && rightClickedUser?.id === item.id && (
                         <div
                           ref={menuRef}
                           className="mt-1 rounded bg-gray-700 p-2 text-sm"
-                          onClick={e => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <button
-                            className="float-right"
-                            onClick={() => setUserModalOpen(false)}
-                          >
+                          <button className="float-right" onClick={() => setUserModalOpen(false)}>
                             ✕
                           </button>
                           <p
                             className="cursor-pointer hover:text-yellow-300"
                             onClick={() => {
-                              const u = serverUserList.find(
-                                (u) => u.username === item.username,
-                              );
+                              const u = serverUserList.find((u) => u.username === item.username);
                               if (u) {
                                 onStartDM(u);
                                 setUserModalOpen(false);
@@ -856,8 +935,13 @@ export default function Chatroom({
                                 className="cursor-pointer hover:text-yellow-400"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const u = serverUserList.find(u => u.username === item.username);
-                                  if (u) { setUserModalOpen(false); setConfirmModerating({ action: 'kick', user: u }); }
+                                  const u = serverUserList.find(
+                                    (u) => u.username === item.username
+                                  );
+                                  if (u) {
+                                    setUserModalOpen(false);
+                                    setConfirmModerating({ action: 'kick', user: u });
+                                  }
                                 }}
                               >
                                 Kick {item.username}
@@ -866,8 +950,13 @@ export default function Chatroom({
                                 className="cursor-pointer hover:text-red-400"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const u = serverUserList.find(u => u.username === item.username);
-                                  if (u) { setUserModalOpen(false); setConfirmModerating({ action: 'ban', user: u }); }
+                                  const u = serverUserList.find(
+                                    (u) => u.username === item.username
+                                  );
+                                  if (u) {
+                                    setUserModalOpen(false);
+                                    setConfirmModerating({ action: 'ban', user: u });
+                                  }
                                 }}
                               >
                                 Ban {item.username}
@@ -879,32 +968,49 @@ export default function Chatroom({
 
                       {/* Message body or edit input */}
                       {editingMessage?.id === item.id ? (
-                        <div>
+                        <div className="relative z-[2]">
                           <input
                             className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm"
                             value={newMessage}
+                            enterKeyHint="go"
                             onChange={(e) => {
-                              if (e.target.value.length < 500)
-                                setNewMessage(e.target.value);
+                              if (e.target.value.length < 500) setNewMessage(e.target.value);
                             }}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter" && !e.shiftKey)
-                                sendEditedMessage();
+                              if (e.key === 'Enter' && !e.shiftKey) sendEditedMessage();
                             }}
-                            onBlur={() => { setEditingMessage(null); setNewMessage(""); }}
+                            onBlur={() => {
+                              setEditingMessage(null);
+                              setNewMessage('');
+                            }}
                           />
                           <p className="text-xs text-gray-400">
-                            escape to cancel • enter to save
+                            <span className="hidden md:inline">escape to cancel • </span>enter to
+                            save
                           </p>
                         </div>
                       ) : (
                         <>
                           {item.forwardedFrom && (
                             <button
-                              onClick={() => handleNavigateForwarded(item.forwardedFrom as ForwardedFrom)}
+                              onClick={() =>
+                                handleNavigateForwarded(item.forwardedFrom as ForwardedFrom)
+                              }
                               className="flex items-center gap-1 text-xs text-gray-400 hover:text-yellow-400 mt-0.5 mb-1 transition-colors"
                             >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-3 w-3"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="15 17 20 12 15 7" />
+                                <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
+                              </svg>
                               <span>
                                 {item.forwardedFrom.type === 'channel'
                                   ? `Forwarded from #${(item.forwardedFrom as ForwardedFrom).chatroomName} in ${(item.forwardedFrom as ForwardedFrom).serverName}`
@@ -912,8 +1018,14 @@ export default function Chatroom({
                               </span>
                             </button>
                           )}
-                          {/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(item.message) ? (
-                            <img src={item.message} alt="uploaded" className="mt-1 max-w-xs max-h-64 rounded-lg object-contain" />
+                          {/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(
+                            item.message
+                          ) ? (
+                            <img
+                              src={item.message}
+                              alt="uploaded"
+                              className="mt-1 max-w-xs max-h-64 rounded-lg object-contain"
+                            />
                           ) : (
                             <p className="text-sm text-gray-200">{item.message}</p>
                           )}
@@ -932,15 +1044,34 @@ export default function Chatroom({
                                   {emoji} {userIds.length}
                                 </button>
                               ))}
-                              <div className="relative group">
+                              <div className="relative group/addreact">
                                 <button
-                                  onClick={() => setReactionPickerMessageId(id => id === item.id ? null : item.id)}
-                                  className="flex items-center text-xs px-2 py-0.5 rounded-full border border-gray-600 bg-gray-700 hover:border-gray-400 transition-colors"
-                                  style={{ filter: 'grayscale(1)', opacity: 0.6 }}
+                                  onClick={() =>
+                                    setReactionPickerMessageId((id) =>
+                                      id === item.id ? null : item.id
+                                    )
+                                  }
+                                  className="flex items-center px-2 py-0.5 rounded-full border border-gray-600 bg-gray-700 hover:border-gray-400 transition-colors text-gray-400 hover:text-white"
                                 >
-                                  😊
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <circle cx="10" cy="13" r="8" />
+                                    <path d="M7 16s1 2 3 2 3-2 3-2" />
+                                    <line x1="8" y1="11" x2="8.01" y2="11" />
+                                    <line x1="12" y1="11" x2="12.01" y2="11" />
+                                    <line x1="18" y1="2" x2="18" y2="8" />
+                                    <line x1="15" y1="5" x2="21" y2="5" />
+                                  </svg>
                                 </button>
-                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-50">
+                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover/addreact:opacity-100 transition-opacity z-50">
                                   Add reaction
                                 </span>
                               </div>
@@ -953,10 +1084,13 @@ export default function Chatroom({
                             >
                               <span className="flex-shrink-0 text-sm">🧵</span>
                               <p className="min-w-0 flex-1 truncate text-xs font-semibold text-indigo-400">
-                                {item.message.length > 50 ? item.message.slice(0, 50) + "…" : item.message}
+                                {item.message.length > 50
+                                  ? item.message.slice(0, 50) + '…'
+                                  : item.message}
                               </p>
                               <span className="flex-shrink-0 text-xs text-gray-400">
-                                {threadCounts[item.id]} {threadCounts[item.id] === 1 ? "reply" : "replies"} ›
+                                {threadCounts[item.id]}{' '}
+                                {threadCounts[item.id] === 1 ? 'reply' : 'replies'} ›
                               </span>
                             </div>
                           )}
@@ -966,93 +1100,252 @@ export default function Chatroom({
 
                     {/* Hover action buttons */}
                     {hover === msgKey && (
-                      <div className="self-start relative flex items-center gap-1 flex-shrink-0">
+                      <div className="self-start relative flex items-center gap-1 flex-shrink-0 mt-1">
                         {isAdmin && (
                           <Tooltip text={item.isPinned ? 'Unpin message' : 'Pin message'}>
                             <button
-                              className={`px-1 text-sm ${item.isPinned ? 'text-yellow-400' : 'text-gray-400 hover:text-yellow-400'}`}
+                              className="flex items-center px-1 text-gray-400 hover:text-white"
                               onClick={() => togglePin(item.id)}
                             >
-                              📌
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M15 4.5l-4 4-4 1.5-1.5 1.5 7 7 1.5-1.5 1.5-4 4-4z" />
+                                <line x1="9" y1="15" x2="4.5" y2="19.5" />
+                                <line x1="14.5" y1="4" x2="20" y2="9.5" />
+                              </svg>
                             </button>
                           </Tooltip>
                         )}
                         <Tooltip text="React">
                           <button
-                            className="text-gray-400 hover:text-white px-1"
-                            onClick={() => setReactionPickerMessageId(id => id === item.id ? null : item.id)}
+                            className="flex items-center text-gray-400 hover:text-white px-1"
+                            onClick={() =>
+                              setReactionPickerMessageId((id) => (id === item.id ? null : item.id))
+                            }
                           >
-                            😊
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <circle cx="10" cy="13" r="8" />
+                              <path d="M7 16s1 2 3 2 3-2 3-2" />
+                              <line x1="8" y1="11" x2="8.01" y2="11" />
+                              <line x1="12" y1="11" x2="12.01" y2="11" />
+                              <line x1="18" y1="2" x2="18" y2="8" />
+                              <line x1="15" y1="5" x2="21" y2="5" />
+                            </svg>
                           </button>
                         </Tooltip>
                         <Tooltip text="Open thread">
                           <button
-                            className="text-gray-400 hover:text-white px-1"
+                            className="flex items-center text-gray-400 hover:text-white px-1"
                             onClick={() => openThread(item)}
                           >
-                            💬
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 4h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7l-4 4V6a2 2 0 0 1 2-2z" />
+                              <path d="M17 8h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1v3l-3-3h-2" />
+                            </svg>
                           </button>
                         </Tooltip>
                         <Tooltip text="Forward">
                           <button
-                            className="text-gray-400 hover:text-white px-1"
-                            onClick={() => { setForwardItem({ text: item.message, id: item.id }); setHover(''); }}
+                            className="flex items-center text-gray-400 hover:text-white px-1"
+                            onClick={() => {
+                              setForwardItem({ text: item.message, id: item.id });
+                              setHover('');
+                            }}
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <polyline points="15 17 20 12 15 7" />
+                              <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
+                            </svg>
                           </button>
                         </Tooltip>
                         <button
-                          className="text-gray-400 hover:text-white px-1 text-lg leading-none"
+                          className="text-gray-400 hover:text-white px-1 flex items-center"
                           onClick={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect();
                             setMenuFlip(window.innerHeight - rect.bottom < 220);
                             setEditMessage(item);
-                            setMessageMenu(m => !m);
+                            setMessageMenu((m) => !m);
                           }}
                         >
-                          ···
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-4 w-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="5" cy="12" r="1" />
+                            <circle cx="12" cy="12" r="1" />
+                            <circle cx="19" cy="12" r="1" />
+                          </svg>
                         </button>
                         {messageMenu && editMessage?.id === item.id && (
-                          <div ref={menuRef} className={`absolute right-0 z-50 w-52 rounded-md bg-gray-800 border border-gray-600 shadow-xl py-1 select-none ${menuFlip ? 'bottom-7' : 'top-7'}`}>
+                          <div
+                            ref={menuRef}
+                            className={`absolute right-0 z-50 w-52 rounded-md bg-gray-800 border border-gray-600 shadow-xl py-1 select-none ${menuFlip ? 'bottom-7' : 'top-7'}`}
+                          >
                             {item.userId === userId && (
                               <button
                                 className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                                onClick={() => { setEditingMessage(item); setNewMessage(item.message); setHover(''); setEditMessage(null); setMessageMenu(false); }}
+                                onClick={() => {
+                                  setEditingMessage(item);
+                                  setNewMessage(item.message);
+                                  setHover('');
+                                  setEditMessage(null);
+                                  setMessageMenu(false);
+                                }}
                               >
                                 Edit Message
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4 text-gray-400"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
                               </button>
                             )}
                             <button
                               className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                              onClick={() => { setForwardItem({ text: item.message, id: item.id }); setMessageMenu(false); setEditMessage(null); }}
+                              onClick={() => {
+                                setForwardItem({ text: item.message, id: item.id });
+                                setMessageMenu(false);
+                                setEditMessage(null);
+                              }}
                             >
                               Forward
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 17 20 12 15 7"/><path d="M4 18v-2a4 4 0 0 1 4-4h12"/></svg>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 text-gray-400"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polyline points="15 17 20 12 15 7" />
+                                <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
+                              </svg>
                             </button>
                             <button
                               className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                              onClick={() => { navigator.clipboard.writeText(item.message); setMessageMenu(false); setEditMessage(null); }}
+                              onClick={() => {
+                                navigator.clipboard.writeText(item.message);
+                                setMessageMenu(false);
+                                setEditMessage(null);
+                              }}
                             >
                               Copy Text
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4 text-gray-400"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                              </svg>
                             </button>
                             {isAdmin && (
                               <button
                                 className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                                onClick={() => { togglePin(item.id); setMessageMenu(false); setEditMessage(null); }}
+                                onClick={() => {
+                                  togglePin(item.id);
+                                  setMessageMenu(false);
+                                  setEditMessage(null);
+                                }}
                               >
                                 {item.isPinned ? 'Unpin Message' : 'Pin Message'}
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V17z"/></svg>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4 text-gray-400"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M15 4.5l-4 4-4 1.5-1.5 1.5 7 7 1.5-1.5 1.5-4 4-4z" />
+                                  <line x1="9" y1="15" x2="4.5" y2="19.5" />
+                                  <line x1="14.5" y1="4" x2="20" y2="9.5" />
+                                </svg>
                               </button>
                             )}
                             {(item.userId === userId || canModerate) && (
                               <button
                                 className="flex w-full items-center justify-between px-3 py-2 text-sm text-red-400 hover:bg-gray-700"
-                                onClick={() => { deleteChatroomMessage(item); setMessageMenu(false); setEditMessage(null); }}
+                                onClick={() => {
+                                  deleteChatroomMessage(item);
+                                  setMessageMenu(false);
+                                  setEditMessage(null);
+                                }}
                               >
                                 Delete Message
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="3 6 5 6 21 6" />
+                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                  <path d="M10 11v6M14 11v6" />
+                                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                </svg>
                               </button>
                             )}
                           </div>
@@ -1079,10 +1372,7 @@ export default function Chatroom({
         {/* Emoji picker */}
         {showEmojiPicker && (
           <>
-            <div
-              className="fixed inset-0 z-10"
-              onClick={() => setShowEmojiPicker(false)}
-            />
+            <div className="fixed inset-0 z-10" onClick={() => setShowEmojiPicker(false)} />
             <div
               ref={menuRef}
               className="absolute bottom-16 left-1/2 -translate-x-1/2 z-20 md:left-2 md:translate-x-0"
@@ -1121,7 +1411,7 @@ export default function Chatroom({
           <div className="relative" ref={plusMenuRef}>
             <button
               className="flex h-7 w-7 items-center justify-center rounded-md text-gray-400 hover:bg-gray-500 hover:text-white text-lg font-bold leading-none transition-colors"
-              onClick={() => setShowPlusMenu(p => !p)}
+              onClick={() => setShowPlusMenu((p) => !p)}
             >
               +
             </button>
@@ -1129,7 +1419,10 @@ export default function Chatroom({
               <div className="absolute bottom-10 left-0 z-50 w-44 rounded-lg bg-gray-900 py-1 shadow-xl border border-gray-700">
                 <button
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
-                  onClick={() => { setShowPlusMenu(false); fileInputRef.current?.click(); }}
+                  onClick={() => {
+                    setShowPlusMenu(false);
+                    fileInputRef.current?.click();
+                  }}
                 >
                   📁 Upload a File
                 </button>
@@ -1137,7 +1430,20 @@ export default function Chatroom({
                   className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-gray-700"
                   onClick={createThread}
                 >
-                  💬 Create Thread
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 4h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7l-4 4V6a2 2 0 0 1 2-2z" />
+                    <path d="M17 8h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1v3l-3-3h-2" />
+                  </svg>
+                  Create Thread
                 </button>
               </div>
             )}
@@ -1146,9 +1452,7 @@ export default function Chatroom({
             ref={messageInputRef}
             className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             placeholder={
-              slowmodeCooldown > 0
-                ? `Slowmode — wait ${slowmodeCooldown}s`
-                : "Send a message!"
+              slowmodeCooldown > 0 ? `Slowmode — wait ${slowmodeCooldown}s` : 'Send a message!'
             }
             value={message}
             disabled={slowmodeCooldown > 0}
@@ -1156,7 +1460,7 @@ export default function Chatroom({
               if (e.target.value.length < 500) setMessage(e.target.value);
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) sendMessage();
+              if (e.key === 'Enter' && !e.shiftKey) sendMessage();
             }}
           />
           <button
@@ -1173,41 +1477,82 @@ export default function Chatroom({
         <div className="fixed inset-0 z-50 flex flex-col border-l border-gray-600 bg-gray-800 md:static md:inset-auto md:z-auto md:w-72 md:flex-shrink-0">
           <div className="flex h-12 items-center justify-between border-b border-gray-600 px-3">
             <div className="flex items-center gap-2">
-              <span className="text-base">📌</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 text-gray-300"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M15 4.5l-4 4-4 1.5-1.5 1.5 7 7 1.5-1.5 1.5-4 4-4z" />
+                <line x1="9" y1="15" x2="4.5" y2="19.5" />
+                <line x1="14.5" y1="4" x2="20" y2="9.5" />
+              </svg>
               <div>
                 <p className="text-sm font-semibold leading-tight">Pinned Messages</p>
                 <p className="text-xs text-gray-400 leading-tight">#{activeChatroom}</p>
               </div>
             </div>
-            <button onClick={() => setShowPinnedPanel(false)} className="text-gray-400 hover:text-white">✕</button>
+            <button
+              onClick={() => setShowPinnedPanel(false)}
+              className="text-gray-400 hover:text-white"
+            >
+              ✕
+            </button>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {messages.filter(m => m.isPinned).length === 0 ? (
+            {messages.filter((m) => m.isPinned).length === 0 ? (
               <p className="text-sm text-gray-400 text-center mt-4">No pinned messages yet.</p>
             ) : (
-              messages.filter(m => m.isPinned).map(m => (
-                <div key={m.id} className="rounded border border-gray-600 bg-gray-700/50 p-3 cursor-pointer hover:border-yellow-400/50 hover:bg-gray-700 transition-colors" onClick={() => scrollToMessage(m.id)}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-semibold" style={{ color: serverUserList.find(u => u.username === m.username)?.nameColor || m.nameColor || '#fde047' }}>
-                      {m.username}
-                    </span>
-                    <span className="text-xs text-gray-500">{formatMessageTime(m.createdAt)}</span>
+              messages
+                .filter((m) => m.isPinned)
+                .map((m) => (
+                  <div
+                    key={m.id}
+                    className="rounded border border-gray-600 bg-gray-700/50 p-3 cursor-pointer hover:border-yellow-400/50 hover:bg-gray-700 transition-colors"
+                    onClick={() => scrollToMessage(m.id)}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span
+                        className="text-xs font-semibold"
+                        style={{
+                          color:
+                            serverUserList.find((u) => u.username === m.username)?.nameColor ||
+                            m.nameColor ||
+                            '#fde047',
+                        }}
+                      >
+                        {m.username}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {formatMessageTime(m.createdAt)}
+                      </span>
+                    </div>
+                    {/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(m.message) ? (
+                      <img
+                        src={m.message}
+                        alt="uploaded"
+                        className="max-w-full max-h-32 rounded object-contain"
+                      />
+                    ) : (
+                      <p className="text-sm text-gray-200 break-words">{m.message}</p>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePin(m.id);
+                        }}
+                        className="mt-2 text-xs text-gray-500 hover:text-red-400"
+                      >
+                        Unpin
+                      </button>
+                    )}
                   </div>
-                  {/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(m.message) ? (
-                    <img src={m.message} alt="uploaded" className="max-w-full max-h-32 rounded object-contain" />
-                  ) : (
-                    <p className="text-sm text-gray-200 break-words">{m.message}</p>
-                  )}
-                  {isAdmin && (
-                    <button
-                      onClick={e => { e.stopPropagation(); togglePin(m.id); }}
-                      className="mt-2 text-xs text-gray-500 hover:text-red-400"
-                    >
-                      Unpin
-                    </button>
-                  )}
-                </div>
-              ))
+                ))
             )}
           </div>
         </div>
@@ -1224,19 +1569,37 @@ export default function Chatroom({
                 <p className="text-xs text-gray-400 leading-tight">#{activeChatroom}</p>
               </div>
             </div>
-            <button onClick={() => { setIsNewThread(false); setNewThreadDraft(""); setNewThreadPrivate(false); }} className="text-gray-400 hover:text-white">✕</button>
+            <button
+              onClick={() => {
+                setIsNewThread(false);
+                setNewThreadDraft('');
+                setNewThreadPrivate(false);
+              }}
+              className="text-gray-400 hover:text-white"
+            >
+              ✕
+            </button>
           </div>
           <div className="flex flex-col gap-3 p-3">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-gray-400">Opening Message</label>
+              <label className="mb-1 block text-xs font-semibold text-gray-400">
+                Opening Message
+              </label>
               <textarea
                 autoFocus
                 className="w-full resize-none rounded bg-gray-600 px-3 py-2 text-sm outline-none"
                 placeholder="What's this thread about?"
                 rows={5}
                 value={newThreadDraft}
-                onChange={(e) => { if (e.target.value.length < 500) setNewThreadDraft(e.target.value); }}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitNewThread(); } }}
+                onChange={(e) => {
+                  if (e.target.value.length < 500) setNewThreadDraft(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    submitNewThread();
+                  }
+                }}
               />
             </div>
             <label className="flex cursor-pointer items-center gap-3 rounded bg-gray-700/50 px-3 py-2">
@@ -1245,10 +1608,12 @@ export default function Chatroom({
                 <p className="text-xs text-gray-400">Only you can see this thread</p>
               </div>
               <div
-                className={`relative h-5 w-9 rounded-full transition-colors ${newThreadPrivate ? "bg-yellow-500" : "bg-gray-600"}`}
-                onClick={() => setNewThreadPrivate(p => !p)}
+                className={`relative h-5 w-9 rounded-full transition-colors ${newThreadPrivate ? 'bg-yellow-500' : 'bg-gray-600'}`}
+                onClick={() => setNewThreadPrivate((p) => !p)}
               >
-                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${newThreadPrivate ? "translate-x-4" : "translate-x-0.5"}`} />
+                <span
+                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${newThreadPrivate ? 'translate-x-4' : 'translate-x-0.5'}`}
+                />
               </div>
             </label>
             <button
@@ -1273,14 +1638,26 @@ export default function Chatroom({
                 <p className="text-xs text-gray-400 leading-tight">#{activeChatroom}</p>
               </div>
             </div>
-            <button onClick={closeThread} className="text-gray-400 hover:text-white">✕</button>
+            <button onClick={closeThread} className="text-gray-400 hover:text-white">
+              ✕
+            </button>
           </div>
           <div className="border-b-2 border-indigo-500/40 bg-indigo-500/5 p-3">
-            <span className="text-xs font-semibold" style={{ color: serverUserList.find(u => u.username === activeThread.username)?.nameColor || activeThread.nameColor || "#fde047" }}>
+            <span
+              className="text-xs font-semibold"
+              style={{
+                color:
+                  serverUserList.find((u) => u.username === activeThread.username)?.nameColor ||
+                  activeThread.nameColor ||
+                  '#fde047',
+              }}
+            >
               {activeThread.username}
             </span>
             <p className="mt-1 text-sm text-gray-200">{activeThread.message}</p>
-            <span className="text-xs text-gray-500">{formatMessageTime(activeThread.updatedAt)}</span>
+            <span className="text-xs text-gray-500">
+              {formatMessageTime(activeThread.updatedAt)}
+            </span>
           </div>
           <div ref={threadScrollRef} className="flex-1 overflow-y-auto p-3">
             {threadMessages.length === 0 && (
@@ -1292,19 +1669,34 @@ export default function Chatroom({
               return (
                 <div
                   key={i}
-                  className={`mb-3 rounded px-2 py-1 -mx-2 ${threadHover === tKey ? "bg-gray-700/50" : ""}`}
-                  onMouseEnter={() => { if (!threadEditingMessage && !threadMessageMenu) setThreadHover(tKey); }}
-                  onMouseLeave={() => setThreadHover("")}
+                  className={`mb-3 rounded px-2 py-1 -mx-2 ${threadHover === tKey ? 'bg-gray-700/50' : ''}`}
+                  onMouseEnter={() => {
+                    if (!threadEditingMessage && !threadMessageMenu) setThreadHover(tKey);
+                  }}
+                  onMouseLeave={() => setThreadHover('')}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold" style={{ color: serverUserList.find(u => u.username === msg.username)?.nameColor || msg.nameColor || "#fde047" }}>
+                    <span
+                      className="text-xs font-semibold"
+                      style={{
+                        color:
+                          serverUserList.find((u) => u.username === msg.username)?.nameColor ||
+                          msg.nameColor ||
+                          '#fde047',
+                      }}
+                    >
                       {msg.username}
                     </span>
-                    <span className="text-xs text-gray-400">{formatMessageTime(msg.updatedAt)}</span>
+                    <span className="text-xs text-gray-400">
+                      {formatMessageTime(msg.updatedAt)}
+                    </span>
                     {threadHover === tKey && canEdit && (
                       <button
                         className="ml-auto text-gray-400 hover:text-white text-xs px-1"
-                        onClick={() => { setThreadEditMessage(msg); setThreadMessageMenu(true); }}
+                        onClick={() => {
+                          setThreadEditMessage(msg);
+                          setThreadMessageMenu(true);
+                        }}
                       >
                         ···
                       </button>
@@ -1313,14 +1705,21 @@ export default function Chatroom({
 
                   {threadMessageMenu && threadEditMessage?.id === msg.id && (
                     <div className="mt-1 flex gap-3 rounded bg-gray-700 p-2 text-xs">
-                      <button onClick={() => { setThreadMessageMenu(false); setThreadEditMessage(null); }}>✕</button>
+                      <button
+                        onClick={() => {
+                          setThreadMessageMenu(false);
+                          setThreadEditMessage(null);
+                        }}
+                      >
+                        ✕
+                      </button>
                       {msg.userId === userId && (
                         <button
                           className="hover:text-yellow-400"
                           onClick={() => {
                             setThreadEditingMessage(msg);
                             setThreadNewMessage(msg.message);
-                            setThreadHover("");
+                            setThreadHover('');
                             setThreadEditMessage(null);
                             setThreadMessageMenu(false);
                           }}
@@ -1332,7 +1731,7 @@ export default function Chatroom({
                         className="hover:text-red-400"
                         onClick={() => {
                           if (!activeThreadRef.current) return;
-                          socket.emit("DELETE_THREAD_MESSAGE", {
+                          socket.emit('DELETE_THREAD_MESSAGE', {
                             messageId: msg.id,
                             parentId: activeThreadRef.current.id,
                             chatroomId: activeChatroomId,
@@ -1349,28 +1748,40 @@ export default function Chatroom({
                   )}
 
                   {threadEditingMessage?.id === msg.id ? (
-                    <div>
+                    <div className="relative z-[2]">
                       <input
                         className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm"
                         value={threadNewMessage}
-                        onChange={e => { if (e.target.value.length < 500) setThreadNewMessage(e.target.value); }}
-                        onKeyDown={e => {
-                          if (e.key === "Enter" && !e.shiftKey) {
+                        enterKeyHint="go"
+                        onChange={(e) => {
+                          if (e.target.value.length < 500) setThreadNewMessage(e.target.value);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
                             if (!activeThreadRef.current || !threadNewMessage.trim()) return;
-                            socket.emit("EDIT_THREAD_MESSAGE", {
+                            socket.emit('EDIT_THREAD_MESSAGE', {
                               messageId: msg.id,
                               message: threadNewMessage,
                               parentId: activeThreadRef.current.id,
                               room: threadRoomKey(activeThreadRef.current.id),
                             });
                             setThreadEditingMessage(null);
-                            setThreadNewMessage("");
+                            setThreadNewMessage('');
                           }
-                          if (e.key === "Escape") { setThreadEditingMessage(null); setThreadNewMessage(""); }
+                          if (e.key === 'Escape') {
+                            setThreadEditingMessage(null);
+                            setThreadNewMessage('');
+                          }
+                        }}
+                        onBlur={() => {
+                          setThreadEditingMessage(null);
+                          setThreadNewMessage('');
                         }}
                         autoFocus
                       />
-                      <p className="text-xs text-gray-400">escape to cancel • enter to save</p>
+                      <p className="text-xs text-gray-400">
+                        <span className="hidden md:inline">escape to cancel • </span>enter to save
+                      </p>
                     </div>
                   ) : (
                     <p className="mt-0.5 text-sm text-gray-200">{msg.message}</p>
@@ -1384,8 +1795,12 @@ export default function Chatroom({
               className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none"
               placeholder="Reply in thread…"
               value={threadMessage}
-              onChange={e => { if (e.target.value.length < 500) setThreadMessage(e.target.value); }}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) sendThreadMessage(); }}
+              onChange={(e) => {
+                if (e.target.value.length < 500) setThreadMessage(e.target.value);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) sendThreadMessage();
+              }}
             />
           </div>
         </div>
@@ -1393,7 +1808,7 @@ export default function Chatroom({
 
       {/* Right sidebar — user list */}
       <div
-        className={`${showMobileMembers ? "fixed inset-0 z-40" : "hidden"} md:static md:block w-full md:w-48 overflow-y-auto border-l border-gray-600 bg-gray-700 p-3`}
+        className={`${showMobileMembers ? 'fixed inset-0 z-40' : 'hidden'} ${hideMembers ? 'md:hidden' : 'md:block'} md:static w-full md:w-48 overflow-y-auto border-l border-gray-600 bg-gray-700 p-3`}
         onClick={() => setShowEmojiPicker(false)}
       >
         <div className="flex items-center justify-between mb-3 md:hidden">
@@ -1421,10 +1836,7 @@ export default function Chatroom({
               </p>
               {usersOfRole.map((user, i) => {
                 const canMod =
-                  isAdmin &&
-                  user.username !== username &&
-                  role !== "owner" &&
-                  role !== "admin";
+                  isAdmin && user.username !== username && role !== 'owner' && role !== 'admin';
                 return (
                   <div
                     key={i}
@@ -1463,55 +1875,59 @@ export default function Chatroom({
                         })()}
                       </div>
                       <span
-                        className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-gray-700 ${STATUS_COLOR[localOnlineUsers.get(user.username) ?? "offline"]}`}
+                        className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border border-gray-700 ${STATUS_COLOR[localOnlineUsers.get(user.username) ?? 'offline']}`}
                       />
                     </div>
                     <span
                       className="truncate text-xs"
-                      style={{ color: user.nameColor || "#fde047" }}
+                      style={{ color: user.nameColor || '#fde047' }}
                     >
                       {user.username}
                     </span>
-                    {sideUserModalOpen &&
-                      sideRightClickedUser?.username === user.username && (
-                        <div
-                          ref={menuRef}
-                          className="absolute z-10 rounded bg-gray-800 p-2 shadow-lg text-xs"
-                          onClick={e => e.stopPropagation()}
+                    {sideUserModalOpen && sideRightClickedUser?.username === user.username && (
+                      <div
+                        ref={menuRef}
+                        className="absolute z-10 rounded bg-gray-800 p-2 shadow-lg text-xs"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button className="float-right" onClick={() => setSideUserModalOpen(false)}>
+                          ✕
+                        </button>
+                        <p
+                          className="cursor-pointer hover:text-yellow-300"
+                          onClick={() => {
+                            onStartDM(user);
+                            setSideUserModalOpen(false);
+                          }}
                         >
-                          <button
-                            className="float-right"
-                            onClick={() => setSideUserModalOpen(false)}
-                          >
-                            ✕
-                          </button>
-                          <p
-                            className="cursor-pointer hover:text-yellow-300"
-                            onClick={() => {
-                              onStartDM(user);
-                              setSideUserModalOpen(false);
-                            }}
-                          >
-                            Send Message
-                          </p>
-                          {canMod && (
-                            <>
-                              <p
-                                className="cursor-pointer hover:text-yellow-400"
-                                onClick={(e) => { e.stopPropagation(); setSideUserModalOpen(false); setConfirmModerating({ action: 'kick', user }); }}
-                              >
-                                Kick {user.username}
-                              </p>
-                              <p
-                                className="cursor-pointer hover:text-red-400"
-                                onClick={(e) => { e.stopPropagation(); setSideUserModalOpen(false); setConfirmModerating({ action: 'ban', user }); }}
-                              >
-                                Ban {user.username}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      )}
+                          Send Message
+                        </p>
+                        {canMod && (
+                          <>
+                            <p
+                              className="cursor-pointer hover:text-yellow-400"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSideUserModalOpen(false);
+                                setConfirmModerating({ action: 'kick', user });
+                              }}
+                            >
+                              Kick {user.username}
+                            </p>
+                            <p
+                              className="cursor-pointer hover:text-red-400"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSideUserModalOpen(false);
+                                setConfirmModerating({ action: 'ban', user });
+                              }}
+                            >
+                              Ban {user.username}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1530,17 +1946,25 @@ export default function Chatroom({
           currentUserId={userId}
           serverJoinedAt={profileTarget.serverJoinedAt}
           onClose={() => setProfileTarget(null)}
-          onAddFriend={Number(profileTarget.userId) !== Number(userId) ? () => onAddFriend?.(profileTarget.userId) : undefined}
-          onAcceptRequest={Number(profileTarget.userId) !== Number(userId) ? onAcceptRequest : undefined}
-          onUnfriend={Number(profileTarget.userId) !== Number(userId) ? () => onUnfriend?.(profileTarget.userId) : undefined}
+          onAddFriend={
+            Number(profileTarget.userId) !== Number(userId)
+              ? () => onAddFriend?.(profileTarget.userId)
+              : undefined
+          }
+          onAcceptRequest={
+            Number(profileTarget.userId) !== Number(userId) ? onAcceptRequest : undefined
+          }
+          onUnfriend={
+            Number(profileTarget.userId) !== Number(userId)
+              ? () => onUnfriend?.(profileTarget.userId)
+              : undefined
+          }
           serverImageUrl={serverImageUrl}
           serverName={serverName}
           onSendMessage={
             Number(profileTarget.userId) !== Number(userId)
               ? () => {
-                  const u = serverUserList.find(
-                    (u) => u.userId === profileTarget.userId,
-                  );
+                  const u = serverUserList.find((u) => u.userId === profileTarget.userId);
                   if (u) onStartDM(u);
                 }
               : undefined
@@ -1555,18 +1979,33 @@ export default function Chatroom({
           isAdmin={isAdmin}
           canModerate={mobileMenuCanModerate}
           isPinned={editMessage.isPinned}
-          onReact={emoji => sendReaction(editMessage.id, emoji)}
+          onReact={(emoji) => sendReaction(editMessage.id, emoji)}
           onMoreReact={() => setReactionPickerMessageId(editMessage.id)}
           onEdit={() => {
             setEditingMessage(editMessage);
             setNewMessage(editMessage.message);
             setHover('');
           }}
-          onDelete={() => { deleteChatroomMessage(); setMobileMenu(false); }}
+          onDelete={() => {
+            deleteChatroomMessage();
+            setMobileMenu(false);
+          }}
           onCopy={() => navigator.clipboard.writeText(editMessage.message)}
           onForward={() => setForwardItem({ text: editMessage.message, id: editMessage.id })}
+          onMessage={() => {
+            const u = serverUserListProp.find((u) => u.userId === editMessage.userId);
+            if (u) onStartDM(u);
+          }}
+          onThread={() => {
+            openThread(editMessage);
+            setMobileMenu(false);
+            setEditMessage(null);
+          }}
           onPin={() => togglePin(editMessage.id)}
-          onClose={() => { setMobileMenu(false); setEditMessage(null); }}
+          onClose={() => {
+            setMobileMenu(false);
+            setEditMessage(null);
+          }}
         />
       )}
       {forwardItem !== null && (
@@ -1577,7 +2016,18 @@ export default function Chatroom({
           nameColor={nameColor}
           currentChatroomId={activeChatroomId}
           isAdmin={isAdmin}
-          sourceContext={serverName ? { type: 'channel', chatroomId: activeChatroomId, chatroomName: activeChatroom, serverId, serverName, messageId: forwardItem.id } as ForwardedFrom : undefined}
+          sourceContext={
+            serverName
+              ? ({
+                  type: 'channel',
+                  chatroomId: activeChatroomId,
+                  chatroomName: activeChatroom,
+                  serverId,
+                  serverName,
+                  messageId: forwardItem.id,
+                } as ForwardedFrom)
+              : undefined
+          }
           onNavigateToChannel={onNavigateToChannel}
           onNavigateToDM={onNavigateToDM}
           onClose={() => setForwardItem(null)}
@@ -1585,10 +2035,17 @@ export default function Chatroom({
       )}
 
       {confirmModerating && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 px-0 sm:px-4" onClick={() => setConfirmModerating(null)}>
-          <div className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl bg-gray-800 p-6 shadow-xl" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 px-0 sm:px-4"
+          onClick={() => setConfirmModerating(null)}
+        >
+          <div
+            className="w-full sm:max-w-sm rounded-t-2xl sm:rounded-2xl bg-gray-800 p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="mb-1 text-base font-bold text-white">
-              {confirmModerating.action === 'kick' ? 'Kick' : 'Ban'} {confirmModerating.user.username}?
+              {confirmModerating.action === 'kick' ? 'Kick' : 'Ban'}{' '}
+              {confirmModerating.user.username}?
             </h3>
             <p className="mb-6 text-sm text-gray-400">
               {confirmModerating.action === 'kick'

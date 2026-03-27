@@ -58,27 +58,58 @@ const friendRequestSlice = createSlice({
   name: 'friendRequest',
   initialState,
   reducers: { resetFriendRequestValues: () => initialState },
-  extraReducers: builder => {
-    builder.addCase(fetchPendingRequests.pending, s => { s.isLoading = true; s.error = false; });
-    builder.addCase(fetchPendingRequests.fulfilled, (s, a) => { s.isLoading = false; s.requests = a.payload; });
-    builder.addCase(fetchPendingRequests.rejected, s => { s.isLoading = false; s.error = true; });
+  extraReducers: (builder) => {
+    builder.addCase(fetchPendingRequests.pending, (s) => {
+      s.isLoading = true;
+      s.error = false;
+    });
+    builder.addCase(fetchPendingRequests.fulfilled, (s, a) => {
+      s.isLoading = false;
+      s.requests = a.payload;
+    });
+    builder.addCase(fetchPendingRequests.rejected, (s) => {
+      s.isLoading = false;
+      s.error = true;
+    });
 
-    builder.addCase(sendFriendRequest.pending, s => { s.isLoading = true; s.error = false; });
-    builder.addCase(sendFriendRequest.fulfilled, s => { s.isLoading = false; });
-    builder.addCase(sendFriendRequest.rejected, s => { s.isLoading = false; s.error = true; });
+    builder.addCase(sendFriendRequest.pending, (s) => {
+      s.isLoading = true;
+      s.error = false;
+    });
+    builder.addCase(sendFriendRequest.fulfilled, (s) => {
+      s.isLoading = false;
+    });
+    builder.addCase(sendFriendRequest.rejected, (s) => {
+      s.isLoading = false;
+      s.error = true;
+    });
 
-    builder.addCase(respondToRequest.pending, s => { s.isLoading = true; s.error = false; });
+    builder.addCase(respondToRequest.pending, (s) => {
+      s.isLoading = true;
+      s.error = false;
+    });
     builder.addCase(respondToRequest.fulfilled, (s, a) => {
       s.isLoading = false;
       // Remove the request from the pending list after responding
       const requestId = a.meta.arg.requestId;
-      s.requests = s.requests.filter(r => r.id !== requestId);
+      s.requests = s.requests.filter((r) => r.id !== requestId);
     });
-    builder.addCase(respondToRequest.rejected, s => { s.isLoading = false; s.error = true; });
+    builder.addCase(respondToRequest.rejected, (s) => {
+      s.isLoading = false;
+      s.error = true;
+    });
 
-    builder.addCase(checkFriendRequest.pending, s => { s.isLoading = true; s.error = false; });
-    builder.addCase(checkFriendRequest.fulfilled, s => { s.isLoading = false; });
-    builder.addCase(checkFriendRequest.rejected, s => { s.isLoading = false; s.error = true; });
+    builder.addCase(checkFriendRequest.pending, (s) => {
+      s.isLoading = true;
+      s.error = false;
+    });
+    builder.addCase(checkFriendRequest.fulfilled, (s) => {
+      s.isLoading = false;
+    });
+    builder.addCase(checkFriendRequest.rejected, (s) => {
+      s.isLoading = false;
+      s.error = true;
+    });
   },
 });
 

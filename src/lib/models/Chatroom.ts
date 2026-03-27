@@ -15,9 +15,15 @@ export interface ChatroomAttributes {
   updatedAt?: Date;
 }
 
-type ChatroomCreationAttributes = Optional<ChatroomAttributes, 'id' | 'categoryId' | 'position' | 'slowmode' | 'isPrivate' | 'allowedUserIds'>;
+type ChatroomCreationAttributes = Optional<
+  ChatroomAttributes,
+  'id' | 'categoryId' | 'position' | 'slowmode' | 'isPrivate' | 'allowedUserIds'
+>;
 
-class Chatroom extends Model<ChatroomAttributes, ChatroomCreationAttributes> implements ChatroomAttributes {
+class Chatroom
+  extends Model<ChatroomAttributes, ChatroomCreationAttributes>
+  implements ChatroomAttributes
+{
   declare id: number;
   declare name: string;
   declare serverId: number;

@@ -14,8 +14,10 @@ export async function PUT(req: NextRequest) {
   const region = formData.get('region') as string | null;
   const imageFile = formData.get('imageUrl') as File | null;
 
-  if (!serverId || !userId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-  if (name && name.length > 30) return NextResponse.json({ error: 'Server name too long' }, { status: 400 });
+  if (!serverId || !userId)
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (name && name.length > 30)
+    return NextResponse.json({ error: 'Server name too long' }, { status: 400 });
 
   const server = await Server.findByPk(serverId);
   if (!server) return NextResponse.json({ error: 'Server not found' }, { status: 404 });
@@ -41,7 +43,7 @@ export async function PUT(req: NextRequest) {
   const user = await User.findByPk(userId);
   if (user?.serversList) {
     const list = user.serversList as Record<string, unknown>[];
-    const idx = list.findIndex(s => s.serverId === serverId);
+    const idx = list.findIndex((s) => s.serverId === serverId);
     if (idx > -1) {
       if (name) list[idx].name = name;
       if (imageUrl) list[idx].imageUrl = imageUrl;

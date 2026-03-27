@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useRef, useState, useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "@/lib/redux/store";
-import { userUpdate } from "@/lib/redux/modules/users/users";
-import { JWTPayload } from "@/lib/auth";
+import { useRef, useState, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { AppDispatch } from '@/lib/redux/store';
+import { userUpdate } from '@/lib/redux/modules/users/users';
+import { JWTPayload } from '@/lib/auth';
 
 interface Props {
   user: JWTPayload;
@@ -48,8 +48,7 @@ function hexToLuminance(hex: string): number {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
   const g = parseInt(hex.slice(3, 5), 16) / 255;
   const b = parseInt(hex.slice(5, 7), 16) / 255;
-  const toLinear = (c: number) =>
-    c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
   return 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
 }
 function contrastRatio(hex1: string, hex2: string): number {
@@ -57,29 +56,28 @@ function contrastRatio(hex1: string, hex2: string): number {
     l2 = hexToLuminance(hex2);
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 }
-const BG = "#1f2937";
+const BG = '#1f2937';
 const isReadable = (color: string) => contrastRatio(color, BG) >= 3;
 
-type Tab = "profile" | "notifications" | "privacy";
+type Tab = 'profile' | 'notifications' | 'privacy';
 
 export default function UserSettings({ user, onClose, onSaved }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const fileRef = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<Tab>("profile");
+  const [tab, setTab] = useState<Tab>('profile');
 
   const [username, setUsername] = useState(user.username);
   const [email, setEmail] = useState(user.email);
-  const [imagePreview, setImagePreview] = useState(user.imageUrl ?? "");
+  const [imagePreview, setImagePreview] = useState(user.imageUrl ?? '');
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [nameColor, setNameColor] = useState<string>(user.nameColor ?? "");
-  const [description, setDescription] = useState<string>(user.description ?? "");
+  const [nameColor, setNameColor] = useState<string>(user.nameColor ?? '');
+  const [description, setDescription] = useState<string>(user.description ?? '');
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   const storageKey = `user_settings_${user.id}`;
 
-  const [notifications, setNotifications] =
-    useState<NotificationSettings>(defaultNotifications);
+  const [notifications, setNotifications] = useState<NotificationSettings>(defaultNotifications);
   const [privacy, setPrivacy] = useState<PrivacySettings>(defaultPrivacy);
 
   useEffect(() => {
@@ -92,8 +90,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
             ...defaultNotifications,
             ...parsed.notifications,
           });
-        if (parsed.privacy)
-          setPrivacy({ ...defaultPrivacy, ...parsed.privacy });
+        if (parsed.privacy) setPrivacy({ ...defaultPrivacy, ...parsed.privacy });
       }
     } catch {}
   }, [storageKey]);
@@ -109,22 +106,22 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
 
   const handleSaveProfile = async () => {
     if (username.trim().length < 2) {
-      setError("Username must be at least 2 characters.");
+      setError('Username must be at least 2 characters.');
       return;
     }
     if (nameColor && !isReadable(nameColor)) {
-      setError("Color does not have enough contrast to be readable.");
+      setError('Color does not have enough contrast to be readable.');
       return;
     }
     setSaving(true);
-    setError("");
+    setError('');
     const formData = new FormData();
-    formData.append("userId", String(user.id));
-    formData.append("username", username.trim());
-    formData.append("email", email.trim());
-    if (imageFile) formData.append("imageUrl", imageFile);
-    formData.append("nameColor", nameColor);
-    formData.append("description", description);
+    formData.append('userId', String(user.id));
+    formData.append('username', username.trim());
+    formData.append('email', email.trim());
+    if (imageFile) formData.append('imageUrl', imageFile);
+    formData.append('nameColor', nameColor);
+    formData.append('description', description);
 
     const result = await dispatch(userUpdate(formData));
     setSaving(false);
@@ -139,7 +136,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
       });
       onClose();
     } else {
-      setError("Failed to save changes.");
+      setError('Failed to save changes.');
     }
   };
 
@@ -147,10 +144,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
     try {
       const stored = localStorage.getItem(storageKey);
       const parsed = stored ? JSON.parse(stored) : {};
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({ ...parsed, notifications }),
-      );
+      localStorage.setItem(storageKey, JSON.stringify({ ...parsed, notifications }));
     } catch {}
     onClose();
   };
@@ -164,27 +158,21 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
     onClose();
   };
 
-  const Toggle = ({
-    checked,
-    onChange,
-  }: {
-    checked: boolean;
-    onChange: (v: boolean) => void;
-  }) => (
+  const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
     <button
       onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors ${checked ? "bg-yellow-500" : "bg-gray-600"}`}
+      className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full transition-colors ${checked ? 'bg-yellow-500' : 'bg-gray-600'}`}
     >
       <span
-        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`}
+        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0'}`}
       />
     </button>
   );
 
   const tabs: { id: Tab; label: string }[] = [
-    { id: "profile", label: "Profile" },
-    { id: "notifications", label: "Notifications" },
-    { id: "privacy", label: "Privacy" },
+    { id: 'profile', label: 'Profile' },
+    { id: 'notifications', label: 'Notifications' },
+    { id: 'privacy', label: 'Privacy' },
   ];
 
   return (
@@ -211,12 +199,12 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
               key={t.id}
               onClick={() => {
                 setTab(t.id);
-                setError("");
+                setError('');
               }}
               className={`mr-4 py-3 text-sm font-medium transition-colors border-b-2 ${
                 tab === t.id
-                  ? "border-yellow-400 text-white"
-                  : "border-transparent text-gray-400 hover:text-gray-200"
+                  ? 'border-yellow-400 text-white'
+                  : 'border-transparent text-gray-400 hover:text-gray-200'
               }`}
             >
               {t.label}
@@ -226,7 +214,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
 
         <div className="p-6">
           {/* Profile Tab */}
-          {tab === "profile" && (
+          {tab === 'profile' && (
             <>
               <div className="mb-5 flex items-center gap-4">
                 <div
@@ -234,11 +222,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                   className="flex h-16 w-16 flex-shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-gray-900 ring-2 ring-gray-600 text-xl font-bold text-white hover:opacity-80"
                 >
                   {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="avatar"
-                      className="h-full w-full object-cover"
-                    />
+                    <img src={imagePreview} alt="avatar" className="h-full w-full object-cover" />
                   ) : (
                     username[0]?.toUpperCase()
                   )}
@@ -260,23 +244,18 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
 
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1 block text-xs text-gray-400">
-                    Username
-                  </label>
+                  <label className="mb-1 block text-xs text-gray-400">Username</label>
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => {
-                      if (e.target.value.length <= 30)
-                        setUsername(e.target.value);
+                      if (e.target.value.length <= 30) setUsername(e.target.value);
                     }}
                     className="w-full rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-yellow-400"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-400">
-                    Email
-                  </label>
+                  <label className="mb-1 block text-xs text-gray-400">Email</label>
                   <input
                     type="email"
                     value={email}
@@ -285,25 +264,23 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-400">
-                    Name Color
-                  </label>
+                  <label className="mb-1 block text-xs text-gray-400">Name Color</label>
                   <div className="flex items-center gap-3">
                     <input
                       type="color"
-                      value={nameColor || "#fde047"}
+                      value={nameColor || '#fde047'}
                       onChange={(e) => setNameColor(e.target.value)}
                       className="h-8 w-10 cursor-pointer rounded border-0 bg-transparent p-0"
                     />
                     <span
                       className="font-semibold text-sm"
-                      style={{ color: nameColor || "#fde047" }}
+                      style={{ color: nameColor || '#fde047' }}
                     >
-                      {username || "Preview"}
+                      {username || 'Preview'}
                     </span>
                     <button
                       type="button"
-                      onClick={() => setNameColor("")}
+                      onClick={() => setNameColor('')}
                       className="ml-auto text-xs text-gray-400 hover:text-gray-200"
                     >
                       Reset to default
@@ -316,9 +293,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                   )}
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-gray-400">
-                    Description
-                  </label>
+                  <label className="mb-1 block text-xs text-gray-400">Description</label>
                   <textarea
                     value={description}
                     onChange={(e) => {
@@ -328,7 +303,9 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                     placeholder="Tell others a bit about yourself…"
                     className="w-full resize-none rounded bg-gray-700 px-3 py-2 text-sm text-white outline-none focus:ring-2 focus:ring-yellow-400 placeholder-gray-500"
                   />
-                  <p className="mt-0.5 text-right text-xs text-gray-500">{description.length}/190</p>
+                  <p className="mt-0.5 text-right text-xs text-gray-500">
+                    {description.length}/190
+                  </p>
                 </div>
               </div>
 
@@ -346,14 +323,14 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                   disabled={saving}
                   className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600 disabled:opacity-50"
                 >
-                  {saving ? "Saving…" : "Save Changes"}
+                  {saving ? 'Saving…' : 'Save Changes'}
                 </button>
               </div>
             </>
           )}
 
           {/* Notifications Tab */}
-          {tab === "notifications" && (
+          {tab === 'notifications' && (
             <>
               <div className="space-y-5">
                 <div>
@@ -363,9 +340,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-white">
-                          Message Notifications
-                        </p>
+                        <p className="text-sm text-white">Message Notifications</p>
                         <p className="text-xs text-gray-400">
                           Get notified when you receive new messages
                         </p>
@@ -383,15 +358,11 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-white">Sound Effects</p>
-                        <p className="text-xs text-gray-400">
-                          Play sounds for incoming messages
-                        </p>
+                        <p className="text-xs text-gray-400">Play sounds for incoming messages</p>
                       </div>
                       <Toggle
                         checked={notifications.soundEnabled}
-                        onChange={(v) =>
-                          setNotifications((n) => ({ ...n, soundEnabled: v }))
-                        }
+                        onChange={(v) => setNotifications((n) => ({ ...n, soundEnabled: v }))}
                       />
                     </div>
                   </div>
@@ -422,9 +393,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-white">Server Activity</p>
-                        <p className="text-xs text-gray-400">
-                          Get notified about server events
-                        </p>
+                        <p className="text-xs text-gray-400">Get notified about server events</p>
                       </div>
                       <Toggle
                         checked={notifications.serverNotifications}
@@ -458,7 +427,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
           )}
 
           {/* Privacy Tab */}
-          {tab === "privacy" && (
+          {tab === 'privacy' && (
             <>
               <div className="space-y-5">
                 <div>
@@ -469,15 +438,11 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-white">Online Status</p>
-                        <p className="text-xs text-gray-400">
-                          Show others when you're online
-                        </p>
+                        <p className="text-xs text-gray-400">Show others when you're online</p>
                       </div>
                       <Toggle
                         checked={privacy.showOnlineStatus}
-                        onChange={(v) =>
-                          setPrivacy((p) => ({ ...p, showOnlineStatus: v }))
-                        }
+                        onChange={(v) => setPrivacy((p) => ({ ...p, showOnlineStatus: v }))}
                       />
                     </div>
                   </div>
@@ -497,9 +462,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                       </div>
                       <Toggle
                         checked={privacy.allowFriendRequests}
-                        onChange={(v) =>
-                          setPrivacy((p) => ({ ...p, allowFriendRequests: v }))
-                        }
+                        onChange={(v) => setPrivacy((p) => ({ ...p, allowFriendRequests: v }))}
                       />
                     </div>
                     <div className="flex items-center justify-between">
@@ -511,9 +474,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
                       </div>
                       <Toggle
                         checked={privacy.allowDirectMessages}
-                        onChange={(v) =>
-                          setPrivacy((p) => ({ ...p, allowDirectMessages: v }))
-                        }
+                        onChange={(v) => setPrivacy((p) => ({ ...p, allowDirectMessages: v }))}
                       />
                     </div>
                   </div>
@@ -545,8 +506,8 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
             className="hover:text-gray-300"
           >
             Terms of Service
-          </a>{" "}
-          ·{" "}
+          </a>{' '}
+          ·{' '}
           <a
             href="/privacy"
             target="_blank"

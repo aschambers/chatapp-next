@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
   if (!server.userBans) server.userBans = [];
   const bans = server.userBans as Record<string, unknown>[];
-  const idx = bans.findIndex(b => b.userId === userId);
+  const idx = bans.findIndex((b) => b.userId === userId);
   if (idx > -1) bans.splice(idx, 1);
   server.changed('userBans', true);
   await server.save();

@@ -13,9 +13,15 @@ export interface FriendRequestAttributes {
   updatedAt?: Date;
 }
 
-type FriendRequestCreationAttributes = Optional<FriendRequestAttributes, 'id' | 'senderImageUrl' | 'status'>;
+type FriendRequestCreationAttributes = Optional<
+  FriendRequestAttributes,
+  'id' | 'senderImageUrl' | 'status'
+>;
 
-class FriendRequest extends Model<FriendRequestAttributes, FriendRequestCreationAttributes> implements FriendRequestAttributes {
+class FriendRequest
+  extends Model<FriendRequestAttributes, FriendRequestCreationAttributes>
+  implements FriendRequestAttributes
+{
   declare id: number;
   declare senderId: number;
   declare senderUsername: string;

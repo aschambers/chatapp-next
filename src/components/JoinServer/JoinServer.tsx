@@ -14,7 +14,7 @@ interface Props {
 
 export default function JoinServer({ userId, email, onClose, onSuccess }: Props) {
   const dispatch = useDispatch<AppDispatch>();
-  const { isLoading, error, errorMessage } = useAppSelector(s => s.invite);
+  const { isLoading, error, errorMessage } = useAppSelector((s) => s.invite);
   const [code, setCode] = useState('');
   const backdropRef = useRef<HTMLDivElement>(null);
 
@@ -48,11 +48,15 @@ export default function JoinServer({ userId, email, onClose, onSuccess }: Props)
           type="text"
           placeholder="Enter an invite code"
           value={code}
-          onChange={e => setCode(e.target.value)}
+          onChange={(e) => setCode(e.target.value)}
           className="mb-4 w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
         />
 
-        {error && <p className="mb-3 text-sm text-red-400">{errorMessage ?? 'Invalid or expired invite code.'}</p>}
+        {error && (
+          <p className="mb-3 text-sm text-red-400">
+            {errorMessage ?? 'Invalid or expired invite code.'}
+          </p>
+        )}
 
         <div className="flex items-center justify-between">
           <button onClick={onClose} className="text-sm text-gray-400 hover:text-white">

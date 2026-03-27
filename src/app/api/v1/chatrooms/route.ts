@@ -6,8 +6,12 @@ import sequelize from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 async function ensureColumns() {
-  await sequelize.query(`ALTER TABLE chatrooms ADD COLUMN IF NOT EXISTS position INTEGER DEFAULT 0`);
-  await sequelize.query(`ALTER TABLE chatrooms ADD COLUMN IF NOT EXISTS slowmode INTEGER DEFAULT 0`);
+  await sequelize.query(
+    `ALTER TABLE chatrooms ADD COLUMN IF NOT EXISTS position INTEGER DEFAULT 0`
+  );
+  await sequelize.query(
+    `ALTER TABLE chatrooms ADD COLUMN IF NOT EXISTS slowmode INTEGER DEFAULT 0`
+  );
 }
 
 function sortByPosition(chatrooms: Chatroom[]) {
@@ -35,14 +39,23 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const { name, serverId, type, isPrivate } = await req.json();
-  if (!name || !serverId) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-  if (name.length > 24) return NextResponse.json({ error: 'Channel name too long' }, { status: 400 });
+  if (!name || !serverId)
+    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (name.length > 24)
+    return NextResponse.json({ error: 'Channel name too long' }, { status: 400 });
 
   const existing = await Chatroom.findOne({ where: { [Op.and]: [{ serverId }, { name }] } });
   if (existing) return NextResponse.json({ error: 'Chatroom exists' }, { status: 422 });
 
   const count = await Chatroom.count({ where: { serverId } });
-  await Chatroom.create({ name, serverId, type: type ?? 'text', categoryId: null, position: count, isPrivate: !!isPrivate });
+  await Chatroom.create({
+    name,
+    serverId,
+    type: type ?? 'text',
+    categoryId: null,
+    position: count,
+    isPrivate: !!isPrivate,
+  });
   const all = await Chatroom.findAll({ where: { serverId } });
   return NextResponse.json(sortByPosition(all));
 }
@@ -81,7 +94,9 @@ export async function PATCH(req: NextRequest) {
   }
 
   await Promise.all(
-    chatroomIds.map((id: number, idx: number) => Chatroom.update({ position: idx }, { where: { id } }))
+    chatroomIds.map((id: number, idx: number) =>
+      Chatroom.update({ position: idx }, { where: { id } })
+    )
   );
 
   const first = await Chatroom.findByPk(chatroomIds[0]);

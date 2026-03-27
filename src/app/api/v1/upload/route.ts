@@ -6,7 +6,8 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   const formData = await req.formData();
   const file = formData.get('file') as File | null;
-  if (!file || file.size === 0) return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+  if (!file || file.size === 0)
+    return NextResponse.json({ error: 'No file provided' }, { status: 400 });
 
   const bytes = await file.arrayBuffer();
   const base64 = Buffer.from(bytes).toString('base64');

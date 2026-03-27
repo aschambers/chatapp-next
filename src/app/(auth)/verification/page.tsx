@@ -11,7 +11,9 @@ function VerificationContent() {
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
   const params = useSearchParams();
-  const { error, isLoading, success, already, resultEmail, noEmail } = useAppSelector(s => s.user);
+  const { error, isLoading, success, already, resultEmail, noEmail } = useAppSelector(
+    (s) => s.user
+  );
 
   const called = useRef(false);
   const token = params.get('token');
@@ -51,12 +53,14 @@ function VerificationContent() {
         <div className="mx-auto w-full max-w-sm rounded-lg bg-gray-800 p-8 shadow-lg">
           {error && <h2 className="mb-2 text-lg font-bold text-red-400">Verification failed</h2>}
           <p className="mb-4 text-sm text-gray-300">
-            {error ? 'The link may have expired. Enter your email to resend.' : 'Enter your email to receive a verification link.'}
+            {error
+              ? 'The link may have expired. Enter your email to resend.'
+              : 'Enter your email to receive a verification link.'}
           </p>
           <input
             type="email"
             value={resendEmail}
-            onChange={e => setResendEmail(e.target.value)}
+            onChange={(e) => setResendEmail(e.target.value)}
             className="mb-3 w-full rounded bg-gray-700 px-3 py-2 text-white"
             placeholder="your@email.com"
           />
@@ -67,9 +71,20 @@ function VerificationContent() {
           >
             {isLoading ? 'Sending…' : 'Resend verification email'}
           </button>
-          {resultEmail && <p className="mt-3 text-sm text-green-400">Email sent! Check your inbox.</p>}
-          {noEmail && <p className="mt-3 text-sm text-red-400">Could not send email. Check the address and try again.</p>}
-          <Link href="/login" className="mt-3 block text-center text-sm text-gray-400 hover:underline">Back to login</Link>
+          {resultEmail && (
+            <p className="mt-3 text-sm text-green-400">Email sent! Check your inbox.</p>
+          )}
+          {noEmail && (
+            <p className="mt-3 text-sm text-red-400">
+              Could not send email. Check the address and try again.
+            </p>
+          )}
+          <Link
+            href="/login"
+            className="mt-3 block text-center text-sm text-gray-400 hover:underline"
+          >
+            Back to login
+          </Link>
         </div>
       </div>
     );
@@ -77,9 +92,7 @@ function VerificationContent() {
 
   return (
     <div className="w-full">
-      <div className="text-white">
-        Verifying your account…
-      </div>
+      <div className="text-white">Verifying your account…</div>
     </div>
   );
 }

@@ -32,11 +32,16 @@ export default function Tooltip({ text, children, position = 'top', className = 
     position === 'right'
       ? { left: coords.x, top: coords.y, transform: 'translateY(-50%)' }
       : position === 'bottom'
-      ? { left: coords.x, top: coords.y, transform: 'translateX(-50%)' }
-      : { left: coords.x, top: coords.y, transform: 'translate(-50%, -100%)' };
+        ? { left: coords.x, top: coords.y, transform: 'translateX(-50%)' }
+        : { left: coords.x, top: coords.y, transform: 'translate(-50%, -100%)' };
 
   return (
-    <div ref={ref} className={`relative ${className}`} onMouseEnter={handleMouseEnter} onMouseLeave={() => setVisible(false)}>
+    <div
+      ref={ref}
+      className={`relative ${className}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setVisible(false)}
+    >
       {children}
       {visible && (
         <span

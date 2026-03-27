@@ -22,12 +22,16 @@ export async function GET(req: NextRequest) {
 
   if (lastActivity === 'true' && userId) {
     const uid = Number(userId);
-    const rows = await Message.findAll({
-      attributes: ['friendId', 'userId', [sequelize.fn('MAX', sequelize.col('createdAt')), 'lastAt']],
+    const rows = (await Message.findAll({
+      attributes: [
+        'friendId',
+        'userId',
+        [sequelize.fn('MAX', sequelize.col('createdAt')), 'lastAt'],
+      ],
       where: { chatroomId: null, [Op.or]: [{ userId: uid }, { friendId: uid }] },
       group: ['friendId', 'userId'],
       raw: true,
-    }) as unknown as { friendId: number; userId: number; lastAt: string }[];
+    })) as unknown as { friendId: number; userId: number; lastAt: string }[];
 
     const result: Record<number, string> = {};
     for (const row of rows) {
@@ -40,13 +44,18 @@ export async function GET(req: NextRequest) {
   }
 
   if (chatroomId) {
-    const messages = await Message.findAll({ where: { chatroomId: Number(chatroomId) }, order: ORDER });
+    const messages = await Message.findAll({
+      where: { chatroomId: Number(chatroomId) },
+      order: ORDER,
+    });
     return NextResponse.json(messages);
   }
 
   if (personal === 'true' && userId) {
     const messages = await Message.findAll({
-      where: { [Op.and]: [{ chatroomId: null }, { userId: Number(userId) }, { friendId: Number(userId) }] },
+      where: {
+        [Op.and]: [{ chatroomId: null }, { userId: Number(userId) }, { friendId: Number(userId) }],
+      },
       order: ORDER,
     });
     return NextResponse.json(messages);
@@ -56,8 +65,20 @@ export async function GET(req: NextRequest) {
     const messages = await Message.findAll({
       where: {
         [Op.or]: [
-          { [Op.and]: [{ userId: Number(userId) }, { friendId: Number(friendId) }, { chatroomId: null }] },
-          { [Op.and]: [{ userId: Number(friendId) }, { friendId: Number(userId) }, { chatroomId: null }] },
+          {
+            [Op.and]: [
+              { userId: Number(userId) },
+              { friendId: Number(friendId) },
+              { chatroomId: null },
+            ],
+          },
+          {
+            [Op.and]: [
+              { userId: Number(friendId) },
+              { friendId: Number(userId) },
+              { chatroomId: null },
+            ],
+          },
         ],
       },
       order: ORDER,
@@ -76,7 +97,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  await Message.create({ username, message, userId, chatroomId: chatroomId ?? null, friendId: friendId ?? null });
+  await Message.create({
+    username,
+    message,
+    userId,
+    chatroomId: chatroomId ?? null,
+    friendId: friendId ?? null,
+  });
 
   if (chatroomId) {
     const messages = await Message.findAll({ where: { chatroomId }, order: ORDER });

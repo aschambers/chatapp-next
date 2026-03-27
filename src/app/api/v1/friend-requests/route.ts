@@ -51,8 +51,16 @@ export async function POST(req: NextRequest) {
   const existingRequest = await FriendRequest.findOne({
     where: {
       [Op.or]: [
-        { senderId: Number(senderId), receiverId: Number(receiverId), status: { [Op.in]: ['pending', 'accepted'] } },
-        { senderId: Number(receiverId), receiverId: Number(senderId), status: { [Op.in]: ['pending', 'accepted'] } },
+        {
+          senderId: Number(senderId),
+          receiverId: Number(receiverId),
+          status: { [Op.in]: ['pending', 'accepted'] },
+        },
+        {
+          senderId: Number(receiverId),
+          receiverId: Number(senderId),
+          status: { [Op.in]: ['pending', 'accepted'] },
+        },
       ],
     },
   });

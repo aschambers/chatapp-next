@@ -13,14 +13,24 @@ export async function POST(req: NextRequest) {
     if (!username || !password || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-    if (username.length > 30) return NextResponse.json({ error: 'Username too long' }, { status: 400 });
+    if (username.length > 30)
+      return NextResponse.json({ error: 'Username too long' }, { status: 400 });
 
     const existing = await User.findOne({ where: { [Op.or]: [{ username }, { email }] } });
     if (existing) return NextResponse.json({ error: 'User exists' }, { status: 422 });
 
     const token = crypto.randomBytes(64).toString('hex');
-    const result = await User.create({ username, password, email, token, isVerified: false, active: false, type: 'user' });
-    if (!result) return NextResponse.json({ error: 'Unknown error creating user' }, { status: 422 });
+    const result = await User.create({
+      username,
+      password,
+      email,
+      token,
+      isVerified: false,
+      active: false,
+      type: 'user',
+    });
+    if (!result)
+      return NextResponse.json({ error: 'Unknown error creating user' }, { status: 422 });
 
     try {
       await resend.emails.send({

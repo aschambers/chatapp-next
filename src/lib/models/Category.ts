@@ -13,9 +13,15 @@ export interface CategoryAttributes {
   updatedAt?: Date;
 }
 
-type CategoryCreationAttributes = Optional<CategoryAttributes, 'id' | 'isPrivate' | 'allowedUserIds'>;
+type CategoryCreationAttributes = Optional<
+  CategoryAttributes,
+  'id' | 'isPrivate' | 'allowedUserIds'
+>;
 
-class Category extends Model<CategoryAttributes, CategoryCreationAttributes> implements CategoryAttributes {
+class Category
+  extends Model<CategoryAttributes, CategoryCreationAttributes>
+  implements CategoryAttributes
+{
   declare id: number;
   declare name: string;
   declare serverId: number;
