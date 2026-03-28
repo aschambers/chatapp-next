@@ -1,7 +1,9 @@
 import { render } from '@testing-library/react';
 import MessageContextMenu from './MessageContextMenu';
 
-global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({}) })) as vi.Mock;
+global.fetch = vi.fn(() =>
+  Promise.resolve({ json: () => Promise.resolve({}) })
+) as unknown as typeof fetch;
 
 const base = {
   isSelf: false,

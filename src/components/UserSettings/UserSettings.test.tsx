@@ -3,7 +3,9 @@ import { Provider } from 'react-redux';
 import { mockStore } from '../../__mocks__/reduxMock';
 import UserSettings from './UserSettings';
 
-global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({}) })) as vi.Mock;
+global.fetch = vi.fn(() =>
+  Promise.resolve({ json: () => Promise.resolve({}) })
+) as unknown as typeof fetch;
 
 const user = { id: 1, username: 'user', email: 'user@test.com', nameColor: null };
 

@@ -2,14 +2,25 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import type { Friend } from '@/lib/types';
 
+const TTL = 30_000;
+
 interface FriendState {
   friends: Friend[];
   isLoading: boolean;
   error: boolean;
   success: boolean;
+  fetchedAt: number | null;
+  fetchedForId: number | null;
 }
 
-const initialState: FriendState = { friends: [], isLoading: false, error: false, success: false };
+const initialState: FriendState = {
+  friends: [],
+  isLoading: false,
+  error: false,
+  success: false,
+  fetchedAt: null,
+  fetchedForId: null,
+};
 
 export const friendCreate = createAsyncThunk(
   'friend/create',
@@ -36,10 +47,22 @@ export const friendUnfriend = createAsyncThunk(
   }
 );
 
-export const findFriends = createAsyncThunk('friend/findAll', async (userId: number) => {
-  const res = await axios.get('/api/v1/friends', { params: { userId } });
-  return res.data;
-});
+export const findFriends = createAsyncThunk(
+  'friend/findAll',
+  async (userId: number) => {
+    const res = await axios.get('/api/v1/friends', { params: { userId } });
+    return res.data;
+  },
+  {
+    condition: (userId, { getState }) => {
+      const { friend } = getState() as { friend: FriendState };
+      if (friend.isLoading) return false;
+      if (friend.fetchedForId === userId && friend.fetchedAt && Date.now() - friend.fetchedAt < TTL)
+        return false;
+      return true;
+    },
+  }
+);
 
 const friendSlice = createSlice({
   name: 'friend',
@@ -76,6 +99,8 @@ const friendSlice = createSlice({
     });
     builder.addCase(findFriends.fulfilled, (s, a) => {
       s.friends = a.payload;
+      s.fetchedAt = Date.now();
+      s.fetchedForId = a.meta.arg;
     });
     builder.addCase(findFriends.rejected, (s) => {
       s.error = true;

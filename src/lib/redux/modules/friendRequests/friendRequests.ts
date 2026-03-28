@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
+const TTL = 30_000;
+
 export interface FriendRequest {
   id: number;
   senderId: number;
@@ -16,15 +18,36 @@ interface FriendRequestState {
   requests: FriendRequest[];
   isLoading: boolean;
   error: boolean;
+  fetchedAt: number | null;
+  fetchedForId: number | null;
 }
 
-const initialState: FriendRequestState = { requests: [], isLoading: false, error: false };
+const initialState: FriendRequestState = {
+  requests: [],
+  isLoading: false,
+  error: false,
+  fetchedAt: null,
+  fetchedForId: null,
+};
 
 export const fetchPendingRequests = createAsyncThunk(
   'friendRequest/fetchPending',
   async (userId: number) => {
     const res = await axios.get('/api/v1/friend-requests', { params: { userId } });
     return res.data as FriendRequest[];
+  },
+  {
+    condition: (userId, { getState }) => {
+      const { friendRequest } = getState() as { friendRequest: FriendRequestState };
+      if (friendRequest.isLoading) return false;
+      if (
+        friendRequest.fetchedForId === userId &&
+        friendRequest.fetchedAt &&
+        Date.now() - friendRequest.fetchedAt < TTL
+      )
+        return false;
+      return true;
+    },
   }
 );
 
@@ -66,6 +89,8 @@ const friendRequestSlice = createSlice({
     builder.addCase(fetchPendingRequests.fulfilled, (s, a) => {
       s.isLoading = false;
       s.requests = a.payload;
+      s.fetchedAt = Date.now();
+      s.fetchedForId = a.meta.arg;
     });
     builder.addCase(fetchPendingRequests.rejected, (s) => {
       s.isLoading = false;

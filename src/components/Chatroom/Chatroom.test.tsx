@@ -2,7 +2,9 @@ import '../../__mocks__/socketMock';
 import { render } from '@testing-library/react';
 import Chatroom from './Chatroom';
 
-global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve([]) })) as vi.Mock;
+global.fetch = vi.fn(() =>
+  Promise.resolve({ json: () => Promise.resolve([]) })
+) as unknown as typeof fetch;
 
 it('renders without crashing', () => {
   render(

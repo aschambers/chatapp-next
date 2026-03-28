@@ -71,6 +71,32 @@ const voiceChannels = new Map<number, { username: string; socketId: string; room
 // Slowmode: last message timestamp per userId:chatroomId
 const slowmodeTimestamps = new Map<string, number>();
 
+// In-memory caches to avoid repeated findByPk DB calls
+const CHATROOM_CACHE_TTL = 60_000; // 1 min — isPrivate/slowmode rarely change
+const SERVER_CACHE_TTL = 60_000; // 1 min — userList for read-only checks
+
+interface CacheEntry<T> { value: T; expiresAt: number }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const chatroomCache = new Map<number, CacheEntry<any>>();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const serverCache = new Map<number, CacheEntry<any>>();
+
+async function getCachedChatroom(id: number) {
+  const cached = chatroomCache.get(id);
+  if (cached && Date.now() < cached.expiresAt) return cached.value;
+  const result = await Chatroom.findByPk(id);
+  if (result) chatroomCache.set(id, { value: result, expiresAt: Date.now() + CHATROOM_CACHE_TTL });
+  return result;
+}
+
+async function getCachedServer(id: number) {
+  const cached = serverCache.get(id);
+  if (cached && Date.now() < cached.expiresAt) return cached.value;
+  const result = await ServerModel.findByPk(id);
+  if (result) serverCache.set(id, { value: result, expiresAt: Date.now() + SERVER_CACHE_TTL });
+  return result;
+}
+
 sequelize.sync().then(async () => {
   await sequelize.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS "forwardedFrom" JSONB`);
   console.log('Socket server DB synced');
@@ -106,9 +132,9 @@ sequelize.sync().then(async () => {
     // ── Chatroom messages ────────────────────────────────────────────────
     socket.on('GET_CHATROOM_MESSAGES', async (data: ChatroomMsgData) => {
       // Reject if the chatroom is private and user is not admin/owner
-      const chatroom = await Chatroom.findByPk(data.chatroomId);
+      const chatroom = await getCachedChatroom(data.chatroomId);
       if (chatroom?.isPrivate) {
-        const server = data.serverId ? await ServerModel.findByPk(data.serverId) : null;
+        const server = data.serverId ? await getCachedServer(data.serverId) : null;
         const userList = (server?.userList ?? []) as { userId: number; type: string }[];
         const member = userList.find(u => u.userId === data.userId);
         if (!member || !['owner', 'admin'].includes(member.type)) return;
@@ -122,7 +148,7 @@ sequelize.sync().then(async () => {
       io.to(data.socketId).emit('RECEIVE_THREAD_COUNTS', threadCounts);
 
       if (data.serverId) {
-        const server = await ServerModel.findByPk(data.serverId);
+        const server = await getCachedServer(data.serverId);
         if (server) io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
       }
 
@@ -130,7 +156,7 @@ sequelize.sync().then(async () => {
     });
 
     socket.on('CHATROOM_MESSAGE', async (data: ChatroomMsgData) => {
-      const chatroom = await Chatroom.findByPk(data.chatroomId);
+      const chatroom = await getCachedChatroom(data.chatroomId);
       const slowmode = chatroom?.slowmode ?? 0;
 
       if (slowmode > 0) {
@@ -393,7 +419,7 @@ sequelize.sync().then(async () => {
 
     // ── Server management ────────────────────────────────────────────────
     socket.on('REFRESH_SERVER_LIST', async (data: ServerData) => {
-      const server = await ServerModel.findByPk(data.serverId);
+      const server = await getCachedServer(data.serverId);
       if (server) io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
     });
 
@@ -412,6 +438,7 @@ sequelize.sync().then(async () => {
       if (uIdx > -1) uList.splice(uIdx, 1);
       server.changed('userList', true);
       await server.save();
+      serverCache.delete(data.serverId);
 
       io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
       const target = users.find(u => u.userId === data.userId);
@@ -440,6 +467,7 @@ sequelize.sync().then(async () => {
       server.changed('userList', true);
       server.changed('userBans', true);
       await server.save();
+      serverCache.delete(data.serverId);
 
       io.in(data.room).emit('RECEIVE_SERVER_LIST', server.userList ?? []);
       const target = users.find(u => u.userId === data.userId);

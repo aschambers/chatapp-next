@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Picker from '@emoji-mart/react';
 import data from '@emoji-mart/data';
 import dayjs from 'dayjs';
@@ -160,6 +160,29 @@ export default function Chatroom({
   const [myConnection] = useState<RTCPeerConnection | null>(null);
 
   const prevMessageCountRef = useRef<number>(0);
+  const [visibleCount, setVisibleCount] = useState(50);
+  const isLoadingMoreRef = useRef(false);
+  const prevScrollHeightRef = useRef(0);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const isInitialScrollRef = useRef(true);
+
+  // Per-username lookup so canModerate + senderImage aren't recomputed per message on every render
+  const userLookup = useMemo(() => {
+    const map = new Map<string, { canModerate: boolean; imageUrl: string | null }>();
+    for (const u of serverUserList) {
+      map.set(u.username, {
+        canModerate: isAdmin && u.type !== 'owner' && u.type !== 'admin' && u.username !== username,
+        imageUrl: u.imageUrl ?? null,
+      });
+    }
+    return map;
+  }, [serverUserList, isAdmin, username]);
+
+  // Only render the most recent N messages; older ones are prepended as the user scrolls up
+  const visibleMessages = useMemo(
+    () => messages.slice(Math.max(0, messages.length - visibleCount)),
+    [messages, visibleCount]
+  );
 
   const playPing = () => {
     try {
@@ -262,8 +285,25 @@ export default function Chatroom({
   useEffect(() => {
     if (pendingScrollId) return;
     const el = scrollContainerRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+    if (!el) return;
+    if (isLoadingMoreRef.current) {
+      // Restore scroll position after prepending older messages
+      el.scrollTop = el.scrollHeight - prevScrollHeightRef.current;
+      isLoadingMoreRef.current = false;
+      return;
+    }
+    if (isInitialScrollRef.current) {
+      if (visibleMessages.length === 0) return;
+      isInitialScrollRef.current = false;
+      el.scrollTop = el.scrollHeight;
+      setIsAtBottom(true);
+      return;
+    }
+    requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      setIsAtBottom(true);
+    });
+  }, [visibleMessages]);
 
   // Scroll to target once new messages have loaded
   useEffect(() => {
@@ -492,6 +532,9 @@ export default function Chatroom({
   useEffect(() => {
     if (prevChatroomIdRef.current !== activeChatroomId) {
       lastMessageTimestampRef.current = null;
+      setVisibleCount(50);
+      isLoadingMoreRef.current = false;
+      isInitialScrollRef.current = true;
     }
     setMessages([]);
     setActiveThread(null);
@@ -858,242 +901,114 @@ export default function Chatroom({
         </div>
 
         {/* Messages */}
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
-          <div className="flex min-h-full flex-col justify-end p-4">
-            {messages.map((item, index) => {
-              const canModerate =
-                isAdmin &&
-                serverUserList.some(
-                  (u) =>
-                    u.username === item.username &&
-                    u.type !== 'owner' &&
-                    u.type !== 'admin' &&
-                    u.username !== username
-                );
-              const msgKey = `message${index}`;
-              const senderImage =
-                item.username === username
-                  ? (currentUserImageUrl ??
-                    serverUserList.find((u) => u.username === item.username)?.imageUrl ??
-                    null)
-                  : (serverUserList.find((u) => u.username === item.username)?.imageUrl ?? null);
-              return (
-                <div
-                  key={index}
-                  id={msgKey}
-                  data-msgid={item.id}
-                  className={`group mb-2 rounded px-2 -mx-2 transition-colors select-none md:select-text ${activeThread?.id === item.id ? 'border-l-2 border-yellow-400 pl-3 bg-yellow-400/5' : userId === item.userId || canModerate ? 'hover:bg-white/5' : ''}`}
-                  onMouseEnter={() => {
-                    if (isTouchRef.current) return;
-                    if (!editingMessage && !messageMenu) setHover(msgKey);
-                  }}
-                  onMouseLeave={() => {
-                    if (!messageMenu) setHover('');
-                  }}
-                  onTouchStart={(e) => {
-                    isTouchRef.current = true;
-                    touchStartPosRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-                    longPressRef.current = setTimeout(() => {
-                      setEditMessage(item);
-                      setMobileMenuCanModerate(canModerate);
-                      setMobileMenu(true);
-                    }, 500);
-                  }}
-                  onTouchMove={(e) => {
-                    const dx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
-                    const dy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
-                    if (dx > 8 || dy > 8) {
+        <div className="relative flex-1 min-h-0">
+          <div
+            ref={scrollContainerRef}
+            className="h-full overflow-y-auto overflow-x-hidden"
+            onScroll={() => {
+              const el = scrollContainerRef.current;
+              if (!el || isLoadingMoreRef.current) return;
+              const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 160;
+              setIsAtBottom(atBottom);
+              if (el.scrollTop <= 100 && messages.length > visibleCount) {
+                isLoadingMoreRef.current = true;
+                prevScrollHeightRef.current = el.scrollHeight;
+                setVisibleCount((c) => c + 50);
+              }
+            }}
+          >
+            <div className="flex min-h-full flex-col justify-end p-4">
+              {messages.length > visibleCount && (
+                <div className="py-2 text-center text-xs text-gray-500">
+                  Loading older messages…
+                </div>
+              )}
+              {visibleMessages.map((item, index) => {
+                const entry = userLookup.get(item.username);
+                const canModerate = entry?.canModerate ?? false;
+                const msgKey = `message${index}`;
+                const senderImage =
+                  item.username === username
+                    ? (currentUserImageUrl ?? entry?.imageUrl ?? null)
+                    : (entry?.imageUrl ?? null);
+                return (
+                  <div
+                    key={index}
+                    id={msgKey}
+                    data-msgid={item.id}
+                    className={`group mb-2 rounded px-2 -mx-2 transition-colors select-none md:select-text ${activeThread?.id === item.id ? 'border-l-2 border-yellow-400 pl-3 bg-yellow-400/5' : userId === item.userId || canModerate ? 'hover:bg-white/5' : ''}`}
+                    onMouseEnter={() => {
+                      if (isTouchRef.current) return;
+                      if (!editingMessage && !messageMenu) setHover(msgKey);
+                    }}
+                    onMouseLeave={() => {
+                      if (!messageMenu) setHover('');
+                    }}
+                    onTouchStart={(e) => {
+                      isTouchRef.current = true;
+                      touchStartPosRef.current = {
+                        x: e.touches[0].clientX,
+                        y: e.touches[0].clientY,
+                      };
+                      longPressRef.current = setTimeout(() => {
+                        setEditMessage(item);
+                        setMobileMenuCanModerate(canModerate);
+                        setMobileMenu(true);
+                      }, 500);
+                    }}
+                    onTouchMove={(e) => {
+                      const dx = Math.abs(e.touches[0].clientX - touchStartPosRef.current.x);
+                      const dy = Math.abs(e.touches[0].clientY - touchStartPosRef.current.y);
+                      if (dx > 8 || dy > 8) {
+                        if (longPressRef.current) {
+                          clearTimeout(longPressRef.current);
+                          longPressRef.current = null;
+                        }
+                      }
+                    }}
+                    onTouchEnd={() => {
                       if (longPressRef.current) {
                         clearTimeout(longPressRef.current);
                         longPressRef.current = null;
                       }
-                    }
-                  }}
-                  onTouchEnd={() => {
-                    if (longPressRef.current) {
-                      clearTimeout(longPressRef.current);
-                      longPressRef.current = null;
-                    }
-                  }}
-                >
-                  <div className="flex gap-3 items-start min-w-0">
-                    {/* Avatar */}
-                    <div
-                      className="flex-shrink-0 mt-1 h-9 w-9 rounded-full bg-gray-900 ring-1 ring-gray-600 overflow-hidden flex items-center justify-center text-sm font-bold text-white cursor-pointer"
-                      onClick={() => {
-                        const su = serverUserList.find((u) => u.username === item.username);
-                        setProfileTarget({
-                          userId: item.userId,
-                          username: item.username,
-                          serverJoinedAt: su?.joinedAt,
-                        });
-                      }}
-                      onContextMenu={(e) => {
-                        e.preventDefault();
-                        setRightClickedUser(item);
-                        setUserModalOpen(true);
-                        setMessageMenu(false);
-                        setEditingMessage(null);
-                      }}
-                    >
-                      {senderImage ? (
-                        <img
-                          src={senderImage}
-                          alt={item.username}
-                          className="h-full w-full object-cover"
-                          loading="eager"
-                        />
-                      ) : (
-                        item.username[0]?.toUpperCase()
-                      )}
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {item.isPinned && (
-                          <span className="flex-shrink-0 text-gray-400" title="Pinned">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-3 w-3"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M15 4.5l-4 4-4 1.5-1.5 1.5 7 7 1.5-1.5 1.5-4 4-4z" />
-                              <line x1="9" y1="15" x2="4.5" y2="19.5" />
-                              <line x1="14.5" y1="4" x2="20" y2="9.5" />
-                            </svg>
-                          </span>
+                    }}
+                  >
+                    <div className="flex gap-3 items-start min-w-0">
+                      {/* Avatar */}
+                      <div
+                        className="flex-shrink-0 mt-1 h-9 w-9 rounded-full bg-gray-900 ring-1 ring-gray-600 overflow-hidden flex items-center justify-center text-sm font-bold text-white cursor-pointer"
+                        onClick={() => {
+                          const su = serverUserList.find((u) => u.username === item.username);
+                          setProfileTarget({
+                            userId: item.userId,
+                            username: item.username,
+                            serverJoinedAt: su?.joinedAt,
+                          });
+                        }}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          setRightClickedUser(item);
+                          setUserModalOpen(true);
+                          setMessageMenu(false);
+                          setEditingMessage(null);
+                        }}
+                      >
+                        {senderImage ? (
+                          <img
+                            src={senderImage}
+                            alt={item.username}
+                            className="h-full w-full object-cover"
+                            loading="eager"
+                          />
+                        ) : (
+                          item.username[0]?.toUpperCase()
                         )}
-                        <span
-                          className="font-semibold cursor-pointer hover:underline truncate max-w-[40%] sm:max-w-[60%]"
-                          style={{
-                            color:
-                              serverUserList.find((u) => u.username === item.username)?.nameColor ||
-                              item.nameColor ||
-                              '#fde047',
-                          }}
-                          onClick={() => {
-                            const su = serverUserList.find((u) => u.username === item.username);
-                            setProfileTarget({
-                              userId: item.userId,
-                              username: item.username,
-                              serverJoinedAt: su?.joinedAt,
-                            });
-                          }}
-                          onContextMenu={(e) => {
-                            e.preventDefault();
-                            setRightClickedUser(item);
-                            setUserModalOpen(true);
-                            setMessageMenu(false);
-                            setEditingMessage(null);
-                          }}
-                        >
-                          {item.username}
-                        </span>
-                        <span className="flex-shrink-0 whitespace-nowrap text-xs text-gray-400">
-                          {formatMessageTime(item.updatedAt)}
-                        </span>
                       </div>
 
-                      {/* User context modal */}
-                      {userModalOpen && rightClickedUser?.id === item.id && (
-                        <div
-                          ref={menuRef}
-                          className="mt-1 rounded bg-gray-700 p-2 text-sm"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button className="float-right" onClick={() => setUserModalOpen(false)}>
-                            ✕
-                          </button>
-                          <p
-                            className="cursor-pointer hover:text-yellow-300"
-                            onClick={() => {
-                              const u = serverUserList.find((u) => u.username === item.username);
-                              if (u) {
-                                onStartDM(u);
-                                setUserModalOpen(false);
-                              }
-                            }}
-                          >
-                            Send Message
-                          </p>
-                          {canModerate && (
-                            <>
-                              <p
-                                className="cursor-pointer hover:text-yellow-400"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const u = serverUserList.find(
-                                    (u) => u.username === item.username
-                                  );
-                                  if (u) {
-                                    setUserModalOpen(false);
-                                    setConfirmModerating({ action: 'kick', user: u });
-                                  }
-                                }}
-                              >
-                                Kick {item.username}
-                              </p>
-                              <p
-                                className="cursor-pointer hover:text-red-400"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const u = serverUserList.find(
-                                    (u) => u.username === item.username
-                                  );
-                                  if (u) {
-                                    setUserModalOpen(false);
-                                    setConfirmModerating({ action: 'ban', user: u });
-                                  }
-                                }}
-                              >
-                                Ban {item.username}
-                              </p>
-                            </>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Message body or inline edit (desktop only) */}
-                      {editingMessage?.id === item.id && !isMobile ? (
-                        <div className="relative z-[2]">
-                          <textarea
-                            ref={editTextareaRef}
-                            className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm resize-none overflow-hidden"
-                            value={newMessage}
-                            enterKeyHint="send"
-                            onChange={(e) => {
-                              if (e.target.value.length < 500) setNewMessage(e.target.value);
-                              const el = e.currentTarget;
-                              el.style.height = 'auto';
-                              el.style.height = el.scrollHeight + 'px';
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Escape') {
-                                setEditingMessage(null);
-                                setNewMessage('');
-                              }
-                              if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                sendEditedMessage();
-                              }
-                            }}
-                          />
-                          <p className="text-xs text-gray-400">escape to cancel • enter to save</p>
-                        </div>
-                      ) : (
-                        <>
-                          {item.forwardedFrom && (
-                            <button
-                              onClick={() =>
-                                handleNavigateForwarded(item.forwardedFrom as ForwardedFrom)
-                              }
-                              className="flex items-center gap-1 text-xs text-gray-400 hover:text-yellow-400 mt-0.5 mb-1 transition-colors"
-                            >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {item.isPinned && (
+                            <span className="flex-shrink-0 text-gray-400" title="Pinned">
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 className="h-3 w-3"
@@ -1104,136 +1019,327 @@ export default function Chatroom({
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                               >
-                                <polyline points="15 17 20 12 15 7" />
-                                <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
+                                <path d="M15 4.5l-4 4-4 1.5-1.5 1.5 7 7 1.5-1.5 1.5-4 4-4z" />
+                                <line x1="9" y1="15" x2="4.5" y2="19.5" />
+                                <line x1="14.5" y1="4" x2="20" y2="9.5" />
                               </svg>
-                              <span>
-                                {item.forwardedFrom.type === 'channel'
-                                  ? `Forwarded from #${(item.forwardedFrom as ForwardedFrom).chatroomName} in ${(item.forwardedFrom as ForwardedFrom).serverName}`
-                                  : `Forwarded from @${(item.forwardedFrom as ForwardedFrom).username}`}
-                              </span>
+                            </span>
+                          )}
+                          <span
+                            className="font-semibold cursor-pointer hover:underline truncate max-w-[40%] sm:max-w-[60%]"
+                            style={{
+                              color:
+                                serverUserList.find((u) => u.username === item.username)
+                                  ?.nameColor ||
+                                item.nameColor ||
+                                '#fde047',
+                            }}
+                            onClick={() => {
+                              const su = serverUserList.find((u) => u.username === item.username);
+                              setProfileTarget({
+                                userId: item.userId,
+                                username: item.username,
+                                serverJoinedAt: su?.joinedAt,
+                              });
+                            }}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              setRightClickedUser(item);
+                              setUserModalOpen(true);
+                              setMessageMenu(false);
+                              setEditingMessage(null);
+                            }}
+                          >
+                            {item.username}
+                          </span>
+                          <span className="flex-shrink-0 whitespace-nowrap text-xs text-gray-400">
+                            {formatMessageTime(item.updatedAt)}
+                          </span>
+                        </div>
+
+                        {/* User context modal */}
+                        {userModalOpen && rightClickedUser?.id === item.id && (
+                          <div
+                            ref={menuRef}
+                            className="mt-1 rounded bg-gray-700 p-2 text-sm"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button className="float-right" onClick={() => setUserModalOpen(false)}>
+                              ✕
                             </button>
-                          )}
-                          {/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(
-                            item.message
-                          ) ? (
-                            <img
-                              src={item.message}
-                              alt="uploaded"
-                              className="mt-1 max-w-xs max-h-64 rounded-lg object-contain"
-                            />
-                          ) : (
-                            <p className="text-sm text-gray-200 whitespace-pre-wrap break-words">
-                              {item.message}
+                            <p
+                              className="cursor-pointer hover:text-yellow-300"
+                              onClick={() => {
+                                const u = serverUserList.find((u) => u.username === item.username);
+                                if (u) {
+                                  onStartDM(u);
+                                  setUserModalOpen(false);
+                                }
+                              }}
+                            >
+                              Send Message
                             </p>
-                          )}
-                          {item.reactions && Object.keys(item.reactions).length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {Object.entries(item.reactions).map(([emoji, userIds]) => (
-                                <button
-                                  key={emoji}
-                                  onClick={() => sendReaction(item.id, emoji)}
-                                  className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors ${
-                                    userIds.includes(userId)
-                                      ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-300'
-                                      : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-400'
-                                  }`}
+                            {canModerate && (
+                              <>
+                                <p
+                                  className="cursor-pointer hover:text-yellow-400"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const u = serverUserList.find(
+                                      (u) => u.username === item.username
+                                    );
+                                    if (u) {
+                                      setUserModalOpen(false);
+                                      setConfirmModerating({ action: 'kick', user: u });
+                                    }
+                                  }}
                                 >
-                                  {emoji} {userIds.length}
-                                </button>
-                              ))}
-                              <div className="relative group/addreact">
-                                <button
-                                  onClick={() =>
-                                    setReactionPickerMessageId((id) =>
-                                      id === item.id ? null : item.id
-                                    )
-                                  }
-                                  className="flex items-center px-2 py-0.5 rounded-full border border-gray-600 bg-gray-700 hover:border-gray-400 transition-colors text-gray-400 hover:text-white"
+                                  Kick {item.username}
+                                </p>
+                                <p
+                                  className="cursor-pointer hover:text-red-400"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const u = serverUserList.find(
+                                      (u) => u.username === item.username
+                                    );
+                                    if (u) {
+                                      setUserModalOpen(false);
+                                      setConfirmModerating({ action: 'ban', user: u });
+                                    }
+                                  }}
                                 >
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
+                                  Ban {item.username}
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Message body or inline edit (desktop only) */}
+                        {editingMessage?.id === item.id && !isMobile ? (
+                          <div className="relative z-[2]">
+                            <textarea
+                              ref={editTextareaRef}
+                              className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm resize-none overflow-hidden"
+                              value={newMessage}
+                              enterKeyHint="send"
+                              onChange={(e) => {
+                                if (e.target.value.length < 500) setNewMessage(e.target.value);
+                                const el = e.currentTarget;
+                                el.style.height = 'auto';
+                                el.style.height = el.scrollHeight + 'px';
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                  setEditingMessage(null);
+                                  setNewMessage('');
+                                }
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                  e.preventDefault();
+                                  sendEditedMessage();
+                                }
+                              }}
+                            />
+                            <p className="text-xs text-gray-400">
+                              escape to cancel • enter to save
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            {item.forwardedFrom && (
+                              <button
+                                onClick={() =>
+                                  handleNavigateForwarded(item.forwardedFrom as ForwardedFrom)
+                                }
+                                className="flex items-center gap-1 text-xs text-gray-400 hover:text-yellow-400 mt-0.5 mb-1 transition-colors"
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-3 w-3"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="15 17 20 12 15 7" />
+                                  <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
+                                </svg>
+                                <span>
+                                  {item.forwardedFrom.type === 'channel'
+                                    ? `Forwarded from #${(item.forwardedFrom as ForwardedFrom).chatroomName} in ${(item.forwardedFrom as ForwardedFrom).serverName}`
+                                    : `Forwarded from @${(item.forwardedFrom as ForwardedFrom).username}`}
+                                </span>
+                              </button>
+                            )}
+                            {/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(
+                              item.message
+                            ) ? (
+                              <img
+                                src={item.message}
+                                alt="uploaded"
+                                className="mt-1 max-w-xs max-h-64 rounded-lg object-contain"
+                              />
+                            ) : (
+                              <p className="text-sm text-gray-200 whitespace-pre-wrap break-words">
+                                {item.message}
+                              </p>
+                            )}
+                            {item.reactions && Object.keys(item.reactions).length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {Object.entries(item.reactions).map(([emoji, userIds]) => (
+                                  <button
+                                    key={emoji}
+                                    onClick={() => sendReaction(item.id, emoji)}
+                                    className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors ${
+                                      userIds.includes(userId)
+                                        ? 'bg-yellow-400/20 border-yellow-400/50 text-yellow-300'
+                                        : 'bg-gray-700 border-gray-600 text-gray-300 hover:border-gray-400'
+                                    }`}
                                   >
-                                    <circle cx="10" cy="13" r="8" />
-                                    <path d="M7 16s1 2 3 2 3-2 3-2" />
-                                    <line x1="8" y1="11" x2="8.01" y2="11" />
-                                    <line x1="12" y1="11" x2="12.01" y2="11" />
-                                    <line x1="18" y1="2" x2="18" y2="8" />
-                                    <line x1="15" y1="5" x2="21" y2="5" />
-                                  </svg>
-                                </button>
-                                <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover/addreact:opacity-100 transition-opacity z-50">
-                                  Add reaction
+                                    {emoji} {userIds.length}
+                                  </button>
+                                ))}
+                                <div className="relative group/addreact">
+                                  <button
+                                    onClick={() =>
+                                      setReactionPickerMessageId((id) =>
+                                        id === item.id ? null : item.id
+                                      )
+                                    }
+                                    className="flex items-center px-2 py-0.5 rounded-full border border-gray-600 bg-gray-700 hover:border-gray-400 transition-colors text-gray-400 hover:text-white"
+                                  >
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      className="h-4 w-4"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    >
+                                      <circle cx="10" cy="13" r="8" />
+                                      <path d="M7 16s1 2 3 2 3-2 3-2" />
+                                      <line x1="8" y1="11" x2="8.01" y2="11" />
+                                      <line x1="12" y1="11" x2="12.01" y2="11" />
+                                      <line x1="18" y1="2" x2="18" y2="8" />
+                                      <line x1="15" y1="5" x2="21" y2="5" />
+                                    </svg>
+                                  </button>
+                                  <span className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 group-hover/addreact:opacity-100 transition-opacity z-50">
+                                    Add reaction
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                            {threadCounts[item.id] > 0 && (
+                              <div
+                                onClick={() => openThread(item)}
+                                className="mt-2 flex w-full max-w-full cursor-pointer items-center gap-2 rounded border border-gray-600 bg-gray-700/40 px-3 py-2 transition-colors hover:border-indigo-500/50 hover:bg-gray-700"
+                              >
+                                <span className="flex-shrink-0 text-sm">🧵</span>
+                                <p className="min-w-0 flex-1 truncate text-xs font-semibold text-indigo-400">
+                                  {item.message.length > 50
+                                    ? item.message.slice(0, 50) + '…'
+                                    : item.message}
+                                </p>
+                                <span className="flex-shrink-0 text-xs text-gray-400">
+                                  {threadCounts[item.id]}{' '}
+                                  {threadCounts[item.id] === 1 ? 'reply' : 'replies'} ›
                                 </span>
                               </div>
-                            </div>
-                          )}
-                          {threadCounts[item.id] > 0 && (
-                            <div
-                              onClick={() => openThread(item)}
-                              className="mt-2 flex w-full max-w-full cursor-pointer items-center gap-2 rounded border border-gray-600 bg-gray-700/40 px-3 py-2 transition-colors hover:border-indigo-500/50 hover:bg-gray-700"
-                            >
-                              <span className="flex-shrink-0 text-sm">🧵</span>
-                              <p className="min-w-0 flex-1 truncate text-xs font-semibold text-indigo-400">
-                                {item.message.length > 50
-                                  ? item.message.slice(0, 50) + '…'
-                                  : item.message}
-                              </p>
-                              <span className="flex-shrink-0 text-xs text-gray-400">
-                                {threadCounts[item.id]}{' '}
-                                {threadCounts[item.id] === 1 ? 'reply' : 'replies'} ›
-                              </span>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+                            )}
+                          </>
+                        )}
+                      </div>
 
-                    {/* Hover action buttons */}
-                    {hover === msgKey && editingMessage?.id !== item.id && (
-                      <div className="self-start relative flex items-center gap-1 flex-shrink-0 mt-1">
-                        <Tooltip text="Add reaction">
-                          <button
-                            className="flex items-center text-gray-400 hover:text-white px-1"
-                            onClick={() =>
-                              setReactionPickerMessageId((id) => (id === item.id ? null : item.id))
-                            }
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
+                      {/* Hover action buttons */}
+                      {hover === msgKey && editingMessage?.id !== item.id && (
+                        <div className="self-start relative flex items-center gap-1 flex-shrink-0 mt-1">
+                          <Tooltip text="Add reaction">
+                            <button
+                              className="flex items-center text-gray-400 hover:text-white px-1"
+                              onClick={() =>
+                                setReactionPickerMessageId((id) =>
+                                  id === item.id ? null : item.id
+                                )
+                              }
                             >
-                              <circle cx="10" cy="13" r="8" />
-                              <path d="M7 16s1 2 3 2 3-2 3-2" />
-                              <line x1="8" y1="11" x2="8.01" y2="11" />
-                              <line x1="12" y1="11" x2="12.01" y2="11" />
-                              <line x1="18" y1="2" x2="18" y2="8" />
-                              <line x1="15" y1="5" x2="21" y2="5" />
-                            </svg>
-                          </button>
-                        </Tooltip>
-                        {item.userId === userId && (
-                          <Tooltip text="Edit message">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <circle cx="10" cy="13" r="8" />
+                                <path d="M7 16s1 2 3 2 3-2 3-2" />
+                                <line x1="8" y1="11" x2="8.01" y2="11" />
+                                <line x1="12" y1="11" x2="12.01" y2="11" />
+                                <line x1="18" y1="2" x2="18" y2="8" />
+                                <line x1="15" y1="5" x2="21" y2="5" />
+                              </svg>
+                            </button>
+                          </Tooltip>
+                          {item.userId === userId && (
+                            <Tooltip text="Edit message">
+                              <button
+                                className="flex items-center text-gray-400 hover:text-white px-1"
+                                onClick={() => {
+                                  setEditingMessage(item);
+                                  setNewMessage(item.message);
+                                  setEditMessage(null);
+                                  setMessageMenu(false);
+                                }}
+                              >
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                </svg>
+                              </button>
+                            </Tooltip>
+                          )}
+                          <Tooltip text="Copy text">
+                            <button
+                              className="flex items-center text-gray-400 hover:text-white px-1"
+                              onClick={() => navigator.clipboard.writeText(item.message)}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                              </svg>
+                            </button>
+                          </Tooltip>
+                          <Tooltip text="Forward">
                             <button
                               className="flex items-center text-gray-400 hover:text-white px-1"
                               onClick={() => {
-                                setEditingMessage(item);
-                                setNewMessage(item.message);
-                                setEditMessage(null);
-                                setMessageMenu(false);
+                                setForwardItem({ text: item.message, id: item.id });
+                                setHover('');
                               }}
                             >
                               <svg
@@ -1246,38 +1352,18 @@ export default function Chatroom({
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                               >
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                <polyline points="15 17 20 12 15 7" />
+                                <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
                               </svg>
                             </button>
                           </Tooltip>
-                        )}
-                        <Tooltip text="Copy text">
                           <button
-                            className="flex items-center text-gray-400 hover:text-white px-1"
-                            onClick={() => navigator.clipboard.writeText(item.message)}
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                            </svg>
-                          </button>
-                        </Tooltip>
-                        <Tooltip text="Forward">
-                          <button
-                            className="flex items-center text-gray-400 hover:text-white px-1"
-                            onClick={() => {
-                              setForwardItem({ text: item.message, id: item.id });
-                              setHover('');
+                            className="text-gray-400 hover:text-white px-1 flex items-center"
+                            onClick={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setMenuFlip(window.innerHeight - rect.bottom < 220);
+                              setEditMessage(item);
+                              setMessageMenu((m) => !m);
                             }}
                           >
                             <svg
@@ -1290,73 +1376,25 @@ export default function Chatroom({
                               strokeLinecap="round"
                               strokeLinejoin="round"
                             >
-                              <polyline points="15 17 20 12 15 7" />
-                              <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
+                              <circle cx="5" cy="12" r="1" />
+                              <circle cx="12" cy="12" r="1" />
+                              <circle cx="19" cy="12" r="1" />
                             </svg>
                           </button>
-                        </Tooltip>
-                        <button
-                          className="text-gray-400 hover:text-white px-1 flex items-center"
-                          onClick={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            setMenuFlip(window.innerHeight - rect.bottom < 220);
-                            setEditMessage(item);
-                            setMessageMenu((m) => !m);
-                          }}
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
-                            <circle cx="5" cy="12" r="1" />
-                            <circle cx="12" cy="12" r="1" />
-                            <circle cx="19" cy="12" r="1" />
-                          </svg>
-                        </button>
-                        {messageMenu && editMessage?.id === item.id && (
-                          <div
-                            ref={menuRef}
-                            className={`absolute right-0 z-50 w-52 rounded-md bg-gray-800 border border-gray-600 shadow-xl py-1 select-none ${menuFlip ? 'bottom-7' : 'top-7'}`}
-                          >
-                            <button
-                              className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                              onClick={() => {
-                                openThread(item);
-                                setMessageMenu(false);
-                                setEditMessage(null);
-                              }}
+                          {messageMenu && editMessage?.id === item.id && (
+                            <div
+                              ref={menuRef}
+                              className={`absolute right-0 z-50 w-52 rounded-md bg-gray-800 border border-gray-600 shadow-xl py-1 select-none ${menuFlip ? 'bottom-7' : 'top-7'}`}
                             >
-                              Open Thread
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 w-4 text-gray-400"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M3 4h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7l-4 4V6a2 2 0 0 1 2-2z" />
-                                <path d="M17 8h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1v3l-3-3h-2" />
-                              </svg>
-                            </button>
-                            {isAdmin && (
                               <button
                                 className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
                                 onClick={() => {
-                                  togglePin(item.id);
+                                  openThread(item);
                                   setMessageMenu(false);
                                   setEditMessage(null);
                                 }}
                               >
-                                {item.isPinned ? 'Unpin Message' : 'Pin Message'}
+                                Open Thread
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
                                   className="h-4 w-4 text-gray-400"
@@ -1367,48 +1405,95 @@ export default function Chatroom({
                                   strokeLinecap="round"
                                   strokeLinejoin="round"
                                 >
-                                  <path d="M15 4.5l-4 4-4 1.5-1.5 1.5 7 7 1.5-1.5 1.5-4 4-4z" />
-                                  <line x1="9" y1="15" x2="4.5" y2="19.5" />
-                                  <line x1="14.5" y1="4" x2="20" y2="9.5" />
+                                  <path d="M3 4h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7l-4 4V6a2 2 0 0 1 2-2z" />
+                                  <path d="M17 8h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1v3l-3-3h-2" />
                                 </svg>
                               </button>
-                            )}
-                            {(item.userId === userId || canModerate) && (
-                              <button
-                                className="flex w-full items-center justify-between px-3 py-2 text-sm text-red-400 hover:bg-gray-700"
-                                onClick={() => {
-                                  deleteChatroomMessage(item);
-                                  setMessageMenu(false);
-                                  setEditMessage(null);
-                                }}
-                              >
-                                Delete Message
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
+                              {isAdmin && (
+                                <button
+                                  className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
+                                  onClick={() => {
+                                    togglePin(item.id);
+                                    setMessageMenu(false);
+                                    setEditMessage(null);
+                                  }}
                                 >
-                                  <polyline points="3 6 5 6 21 6" />
-                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                                  <path d="M10 11v6M14 11v6" />
-                                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                                </svg>
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                                  {item.isPinned ? 'Unpin Message' : 'Pin Message'}
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4 text-gray-400"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M15 4.5l-4 4-4 1.5-1.5 1.5 7 7 1.5-1.5 1.5-4 4-4z" />
+                                    <line x1="9" y1="15" x2="4.5" y2="19.5" />
+                                    <line x1="14.5" y1="4" x2="20" y2="9.5" />
+                                  </svg>
+                                </button>
+                              )}
+                              {(item.userId === userId || canModerate) && (
+                                <button
+                                  className="flex w-full items-center justify-between px-3 py-2 text-sm text-red-400 hover:bg-gray-700"
+                                  onClick={() => {
+                                    deleteChatroomMessage(item);
+                                    setMessageMenu(false);
+                                    setEditMessage(null);
+                                  }}
+                                >
+                                  Delete Message
+                                  <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-4 w-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                    <path d="M10 11v6M14 11v6" />
+                                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
+          {isMobile && !isAtBottom && (
+            <button
+              onClick={() => {
+                const el = scrollContainerRef.current;
+                if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+              }}
+              className="absolute bottom-4 right-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-gray-700 shadow-lg border border-gray-600 text-gray-200"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Reaction picker */}
