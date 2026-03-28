@@ -369,8 +369,9 @@ export default function Chatroom({
           const merged = [...prev];
           for (const msg of reversed) {
             const idx = merged.findIndex((m) => m.id === msg.id);
-            if (idx !== -1) merged[idx] = msg; // update edited/reacted message
-            else merged.push(msg);             // new message
+            if (idx !== -1)
+              merged[idx] = msg; // update edited/reacted message
+            else merged.push(msg); // new message
           }
           merged.sort((a, b) => {
             const ta = a.createdAt ?? '';
@@ -504,7 +505,8 @@ export default function Chatroom({
 
     const emitJoin = () => {
       socketIdRef.current = socket.id ?? '';
-      const isReconnect = prevChatroomIdRef.current === activeChatroomId && lastMessageTimestampRef.current;
+      const isReconnect =
+        prevChatroomIdRef.current === activeChatroomId && lastMessageTimestampRef.current;
       socket.emit('GET_CHATROOM_MESSAGES', {
         socketId: socket.id,
         chatroomId: activeChatroomId,
