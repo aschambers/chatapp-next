@@ -23,6 +23,7 @@ interface ChatroomMsgData {
   messageId: number;
   nameColor?: string | null;
   forwardedFrom?: Record<string, unknown> | null;
+  since?: string;
 }
 
 interface UserMsgData {
@@ -74,16 +75,22 @@ sequelize.sync().then(async () => {
   await sequelize.query(`ALTER TABLE messages ADD COLUMN IF NOT EXISTS "forwardedFrom" JSONB`);
   console.log('Socket server DB synced');
 
-  async function getChatroomMessages(chatroomId: number, requestingUserId?: number) {
-    const messages = await Message.findAll({ where: { chatroomId, parentId: null }, order: ORDER });
+  async function getChatroomMessages(chatroomId: number, requestingUserId?: number, since?: string) {
+    const where: Record<string, unknown> = { chatroomId, parentId: null };
+    if (since) where.updatedAt = { [Op.gt]: new Date(since) };
+    const messages = await Message.findAll({ where, order: ORDER });
+
+    // Thread counts are always full regardless of `since`
+    const allMessages = since
+      ? await Message.findAll({ where: { chatroomId, parentId: null }, attributes: ['id', 'isPrivate', 'userId'], order: ORDER })
+      : messages;
     const countRows = await sequelize.query<{ parentId: number; count: string }>(
       `SELECT "parentId", COUNT(*)::int AS count FROM messages WHERE "chatroomId" = :chatroomId AND "parentId" IS NOT NULL GROUP BY "parentId"`,
       { replacements: { chatroomId }, type: QueryTypes.SELECT }
     );
     const threadCounts: Record<number, number> = {};
     for (const row of countRows) {
-      const parent = messages.find(m => m.id === row.parentId);
-      // Private thread cards only visible to their creator
+      const parent = allMessages.find(m => m.id === row.parentId);
       if (parent?.isPrivate && requestingUserId !== undefined && parent.userId !== requestingUserId) continue;
       threadCounts[row.parentId] = Number(row.count);
     }
@@ -110,8 +117,8 @@ sequelize.sync().then(async () => {
       socket.leave(data.previousRoom);
       socket.join(data.room);
 
-      const { messages, threadCounts } = await getChatroomMessages(data.chatroomId, data.userId);
-      io.to(data.socketId).emit('RECEIVE_CHATROOM_MESSAGES', messages);
+      const { messages, threadCounts } = await getChatroomMessages(data.chatroomId, data.userId, data.since);
+      io.to(data.socketId).emit('RECEIVE_CHATROOM_MESSAGES', { messages, incremental: !!data.since });
       io.to(data.socketId).emit('RECEIVE_THREAD_COUNTS', threadCounts);
 
       if (data.serverId) {

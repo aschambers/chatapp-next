@@ -3,11 +3,15 @@ import axios from 'axios';
 
 import type { Category } from '@/lib/types';
 
+const TTL = 30_000;
+
 interface CategoryState {
   categories: Category[];
   isLoading: boolean;
   error: boolean;
   success: boolean;
+  fetchedAt: number | null;
+  fetchedForId: number | null;
 }
 
 const initialState: CategoryState = {
@@ -15,6 +19,8 @@ const initialState: CategoryState = {
   isLoading: false,
   error: false,
   success: false,
+  fetchedAt: null,
+  fetchedForId: null,
 };
 
 export const categoryCreate = createAsyncThunk(
@@ -25,10 +31,26 @@ export const categoryCreate = createAsyncThunk(
   }
 );
 
-export const categoryFindAll = createAsyncThunk('category/findAll', async (serverId: number) => {
-  const res = await axios.get('/api/v1/categories', { params: { serverId } });
-  return res.data;
-});
+export const categoryFindAll = createAsyncThunk(
+  'category/findAll',
+  async (serverId: number) => {
+    const res = await axios.get('/api/v1/categories', { params: { serverId } });
+    return res.data;
+  },
+  {
+    condition: (serverId, { getState }) => {
+      const { category } = getState() as { category: CategoryState };
+      if (category.isLoading) return false;
+      if (
+        category.fetchedForId === serverId &&
+        category.fetchedAt &&
+        Date.now() - category.fetchedAt < TTL
+      )
+        return false;
+      return true;
+    },
+  }
+);
 
 export const categoryUpdate = createAsyncThunk(
   'category/update',
@@ -64,6 +86,8 @@ const categorySlice = createSlice({
     });
     builder.addCase(categoryFindAll.fulfilled, (s, a) => {
       s.categories = a.payload;
+      s.fetchedAt = Date.now();
+      s.fetchedForId = a.meta.arg;
     });
     builder.addCase(categoryFindAll.rejected, (s) => {
       s.error = true;

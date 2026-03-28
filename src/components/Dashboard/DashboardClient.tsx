@@ -151,6 +151,7 @@ export default function DashboardClient({
     serverLoading || friendLoading || chatroomLoading || inviteLoading || categoryLoading;
 
   const hasRestored = useRef(initialActiveServer !== null);
+  const lastFetchedServerIdRef = useRef<number | null>(null);
   const pendingChatroomId = useRef<number | null>(initialPendingChatroomId);
   const shouldAutoSelectRef = useRef(
     initialActiveServer !== null && initialPendingChatroomId === null
@@ -253,9 +254,13 @@ export default function DashboardClient({
       goHome();
       dispatch(findServer(id)).then(() => setServersFetched(true));
     };
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     const handleReconnect = () => {
-      dispatch(findServer(id)).then(() => setServersFetched(true));
-      socket.emit('SET_STATUS', { username, status: userStatusRef.current });
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(() => {
+        dispatch(findServer(id)).then(() => setServersFetched(true));
+        socket.emit('SET_STATUS', { username, status: userStatusRef.current });
+      }, 2000);
     };
     const handleFriendRequest = (req: { senderUsername?: string }) => {
       dispatch(fetchPendingRequests(id));
@@ -292,6 +297,7 @@ export default function DashboardClient({
     socket.emit('SEND_USER', { userId: id, username, status: userStatusRef.current });
     socket.emit('GET_USERS');
     return () => {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       socket.off('RECEIVE_USERS', handleUsers);
       socket.off('FORCE_HOME', handleForceHome);
       socket.off('connect', handleReconnect);
@@ -321,7 +327,8 @@ export default function DashboardClient({
   }, [friends]);
 
   useEffect(() => {
-    if (serverId) {
+    if (serverId && serverId !== lastFetchedServerIdRef.current) {
+      lastFetchedServerIdRef.current = serverId;
       dispatch(getChatrooms(serverId));
       dispatch(findUserList(serverId));
       dispatch(categoryFindAll(serverId));
@@ -506,7 +513,6 @@ export default function DashboardClient({
   };
 
   const selectChatroom = (chatroom: ChatroomType) => {
-    socket.emit('GET_USERS');
     setActiveChatroom(chatroom.name);
     setActiveChatroomId(chatroom.id);
     setActiveChatroomType(chatroom.type);

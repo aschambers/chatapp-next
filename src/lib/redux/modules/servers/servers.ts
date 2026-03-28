@@ -13,6 +13,8 @@ export interface ServerInfo {
   imageUrl: string | null;
 }
 
+const TTL = 30_000;
+
 interface ServerState {
   servers: Server[];
   serverUserList: ServerUser[];
@@ -22,6 +24,10 @@ interface ServerState {
   error: boolean;
   findBansSuccess: boolean;
   unbanUserSuccess: boolean;
+  fetchedAt: number | null;
+  fetchedForId: number | null;
+  userListFetchedAt: number | null;
+  userListFetchedForId: number | null;
 }
 
 const initialState: ServerState = {
@@ -33,6 +39,10 @@ const initialState: ServerState = {
   error: false,
   findBansSuccess: false,
   unbanUserSuccess: false,
+  fetchedAt: null,
+  fetchedForId: null,
+  userListFetchedAt: null,
+  userListFetchedForId: null,
 };
 
 export const createServer = createAsyncThunk('server/create', async (params: FormData) => {
@@ -40,15 +50,42 @@ export const createServer = createAsyncThunk('server/create', async (params: For
   return res.data;
 });
 
-export const findServer = createAsyncThunk('server/find', async (userId: number) => {
-  const res = await axios.get('/api/v1/servers', { params: { id: userId } });
-  return res.data;
-});
+export const findServer = createAsyncThunk(
+  'server/find',
+  async (userId: number) => {
+    const res = await axios.get('/api/v1/servers', { params: { id: userId } });
+    return res.data;
+  },
+  {
+    condition: (userId, { getState }) => {
+      const { server } = getState() as { server: ServerState };
+      if (server.isLoading) return false;
+      if (server.fetchedForId === userId && server.fetchedAt && Date.now() - server.fetchedAt < TTL)
+        return false;
+      return true;
+    },
+  }
+);
 
-export const findUserList = createAsyncThunk('server/findUserList', async (serverId: number) => {
-  const res = await axios.get('/api/v1/servers/user-list', { params: { serverId } });
-  return res.data;
-});
+export const findUserList = createAsyncThunk(
+  'server/findUserList',
+  async (serverId: number) => {
+    const res = await axios.get('/api/v1/servers/user-list', { params: { serverId } });
+    return res.data;
+  },
+  {
+    condition: (serverId, { getState }) => {
+      const { server } = getState() as { server: ServerState };
+      if (
+        server.userListFetchedForId === serverId &&
+        server.userListFetchedAt &&
+        Date.now() - server.userListFetchedAt < TTL
+      )
+        return false;
+      return true;
+    },
+  }
+);
 
 export const findUserBans = createAsyncThunk('server/findUserBans', async (serverId: number) => {
   const res = await axios.get('/api/v1/servers/user-bans', { params: { serverId } });
@@ -171,6 +208,8 @@ const serverSlice = createSlice({
     });
     builder.addCase(findServer.fulfilled, (s, a) => {
       s.servers = a.payload;
+      s.fetchedAt = Date.now();
+      s.fetchedForId = a.meta.arg;
     });
     builder.addCase(findServer.rejected, (s) => {
       s.error = true;
@@ -181,6 +220,8 @@ const serverSlice = createSlice({
     });
     builder.addCase(findUserList.fulfilled, (s, a) => {
       s.serverUserList = a.payload;
+      s.userListFetchedAt = Date.now();
+      s.userListFetchedForId = a.meta.arg;
     });
     builder.addCase(findUserList.rejected, (s) => {
       s.error = true;

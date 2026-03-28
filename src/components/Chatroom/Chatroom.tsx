@@ -213,6 +213,7 @@ export default function Chatroom({
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const touchStartPosRef = useRef({ x: 0, y: 0 });
   const prevChatroomIdRef = useRef<number>(activeChatroomId);
+  const lastMessageTimestampRef = useRef<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Sync serverUserList from props
@@ -349,12 +350,48 @@ export default function Chatroom({
 
   // Socket event listeners
   useEffect(() => {
-    const handleMessages = (data: Message[]) => {
+    const handleMessages = (data: Message[] | { messages: Message[]; incremental: boolean }) => {
+      const isIncremental = !Array.isArray(data) && data.incremental;
+      const incoming = Array.isArray(data) ? data : data.messages;
+      const reversed = [...incoming].reverse();
+
+      // Update the last-seen timestamp to the max updatedAt across received messages
+      if (reversed.length > 0) {
+        const maxTs = reversed.reduce((max, m) => {
+          const ts = m.updatedAt ?? m.createdAt ?? '';
+          return ts > max ? ts : max;
+        }, lastMessageTimestampRef.current ?? '');
+        lastMessageTimestampRef.current = maxTs;
+      }
+
+      if (isIncremental) {
+        setMessages((prev) => {
+          const merged = [...prev];
+          for (const msg of reversed) {
+            const idx = merged.findIndex((m) => m.id === msg.id);
+            if (idx !== -1) merged[idx] = msg; // update edited/reacted message
+            else merged.push(msg);             // new message
+          }
+          merged.sort((a, b) => {
+            const ta = a.createdAt ?? '';
+            const tb = b.createdAt ?? '';
+            return ta < tb ? -1 : ta > tb ? 1 : 0;
+          });
+          const prev2 = prevMessageCountRef.current;
+          if (merged.length > prev2) {
+            const newest = merged[merged.length - 1];
+            if (newest.userId !== userId) playPing();
+          }
+          prevMessageCountRef.current = merged.length;
+          return merged;
+        });
+        return;
+      }
+
       setMessageMenu(false);
       setEditMessage(null);
       setEditingMessage(null);
       setNewMessage('');
-      const reversed = [...data].reverse();
       const prev = prevMessageCountRef.current;
       if (prev > 0 && reversed.length > prev) {
         const newest = reversed[reversed.length - 1];
@@ -452,6 +489,9 @@ export default function Chatroom({
 
   // Join chatroom on mount and when activeChatroomId changes
   useEffect(() => {
+    if (prevChatroomIdRef.current !== activeChatroomId) {
+      lastMessageTimestampRef.current = null;
+    }
     setMessages([]);
     setActiveThread(null);
     setThreadMessages([]);
@@ -464,6 +504,7 @@ export default function Chatroom({
 
     const emitJoin = () => {
       socketIdRef.current = socket.id ?? '';
+      const isReconnect = prevChatroomIdRef.current === activeChatroomId && lastMessageTimestampRef.current;
       socket.emit('GET_CHATROOM_MESSAGES', {
         socketId: socket.id,
         chatroomId: activeChatroomId,
@@ -471,6 +512,7 @@ export default function Chatroom({
         userId,
         previousRoom: prevRoom || room,
         room,
+        ...(isReconnect ? { since: lastMessageTimestampRef.current } : {}),
       });
       previousRoomRef.current = room;
     };

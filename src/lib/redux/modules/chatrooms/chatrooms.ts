@@ -2,12 +2,16 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import type { Chatroom } from '@/lib/types';
 
+const TTL = 30_000;
+
 interface ChatroomState {
   chatrooms: Chatroom[];
   isLoading: boolean;
   error: boolean;
   success: boolean;
   updateChatroomSuccess: boolean;
+  fetchedAt: number | null;
+  fetchedForId: number | null;
 }
 
 const initialState: ChatroomState = {
@@ -16,6 +20,8 @@ const initialState: ChatroomState = {
   error: false,
   success: false,
   updateChatroomSuccess: false,
+  fetchedAt: null,
+  fetchedForId: null,
 };
 
 export const createChatroom = createAsyncThunk(
@@ -26,10 +32,26 @@ export const createChatroom = createAsyncThunk(
   }
 );
 
-export const getChatrooms = createAsyncThunk('chatroom/getAll', async (serverId: number) => {
-  const res = await axios.get('/api/v1/chatrooms', { params: { serverId } });
-  return res.data;
-});
+export const getChatrooms = createAsyncThunk(
+  'chatroom/getAll',
+  async (serverId: number) => {
+    const res = await axios.get('/api/v1/chatrooms', { params: { serverId } });
+    return res.data;
+  },
+  {
+    condition: (serverId, { getState }) => {
+      const { chatroom } = getState() as { chatroom: ChatroomState };
+      if (chatroom.isLoading) return false;
+      if (
+        chatroom.fetchedForId === serverId &&
+        chatroom.fetchedAt &&
+        Date.now() - chatroom.fetchedAt < TTL
+      )
+        return false;
+      return true;
+    },
+  }
+);
 
 export const deleteChatroom = createAsyncThunk(
   'chatroom/delete',
@@ -82,6 +104,8 @@ const chatroomSlice = createSlice({
     });
     builder.addCase(getChatrooms.fulfilled, (s, a) => {
       s.chatrooms = a.payload;
+      s.fetchedAt = Date.now();
+      s.fetchedForId = a.meta.arg;
     });
     builder.addCase(getChatrooms.rejected, (s) => {
       s.error = true;
