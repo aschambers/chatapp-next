@@ -170,7 +170,6 @@ export default function DashboardClient({
   const [sidebarOpen, setSidebarOpen] = useState(initialActiveServer === null);
   const [scrollToMessageId, setScrollToMessageId] = useState<number | null>(null);
   const [dmLastActivity, setDmLastActivity] = useState<Record<number, string>>({});
-  const [isRestoringChatroom, setIsRestoringChatroom] = useState(initialPendingChatroomId !== null);
   const [userStatus, setUserStatus] = useState<UserStatus>(initialUserStatus);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [statusSubMenu, setStatusSubMenu] = useState<UserStatus | null>(null);
@@ -355,7 +354,6 @@ export default function DashboardClient({
         if (sel.type === 'chatroom') {
           pendingChatroomId.current = sel.chatroomId;
           setSidebarOpen(false);
-          setIsRestoringChatroom(true);
         } else {
           shouldAutoSelectRef.current = true;
         }
@@ -380,7 +378,6 @@ export default function DashboardClient({
         setSidebarOpen(false);
         pendingChatroomId.current = null;
       }
-      setIsRestoringChatroom(false);
     } else if (shouldAutoSelectRef.current) {
       shouldAutoSelectRef.current = false;
       const sorted = [...chatrooms].sort((a, b) => {
@@ -680,6 +677,7 @@ export default function DashboardClient({
   };
 
   const isHome = !activeServer;
+  const isLoadingChatroom = !!activeServer && !activeChatroomId && !currentFriend;
 
   // Drag left on sidebar → conversation panel slides in from the right on top
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -809,7 +807,7 @@ export default function DashboardClient({
       {/* Channel / DM sidebar */}
       <div
         ref={sidebarRef}
-        className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex fixed md:relative inset-0 md:inset-auto z-30 md:z-auto w-full md:w-[var(--sb-w)] h-[100dvh] md:h-auto flex-shrink-0 flex-col bg-gray-700`}
+        className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex fixed md:relative inset-0 md:inset-auto z-30 md:z-auto w-full h-[100dvh] md:h-auto flex-shrink-0 flex-col bg-gray-700 overflow-hidden ${isLoadingChatroom ? 'md:w-14' : 'md:w-[var(--sb-w)]'}`}
         style={{ '--sb-w': `${sidebarWidth}px` } as React.CSSProperties}
         onMouseDown={(e) => {
           if (e.button !== 0) return;
@@ -914,14 +912,14 @@ export default function DashboardClient({
             </Tooltip>
           </div>
           {/* Channel list — right side of sidebar */}
-          <div className="flex flex-1 flex-col overflow-hidden">
+          <div className={`flex flex-col overflow-hidden ${isLoadingChatroom ? 'w-0' : 'flex-1'}`}>
             {/* Scrollable content area */}
             <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
               {activeServer ? (
                 <div className="h-full overflow-hidden">
                   <ServerChannelList
                     serverId={activeServer.serverId}
-                    serverName={activeServer.name}
+                    serverName={isLoadingChatroom ? '' : activeServer.name}
                     isAdmin={isAdmin}
                     userId={id}
                     serverUserList={serverUserList}
@@ -1466,6 +1464,11 @@ export default function DashboardClient({
         onTouchStart={handleMainTouchStart}
         onTouchEnd={handleMainTouchEnd}
       >
+        {isLoadingChatroom ? (
+          <div className="flex flex-1 items-center justify-center">
+            <div className="h-16 w-16 animate-spin rounded-full border-4 border-gray-600 border-t-yellow-400" />
+          </div>
+        ) : (<>
         {/* Mobile top bar */}
         <div className="flex md:hidden items-center gap-2 border-b border-gray-600 bg-gray-700 px-3 py-2 flex-shrink-0">
           <button
@@ -1475,7 +1478,7 @@ export default function DashboardClient({
             ‹
           </button>
           <span className="truncate text-sm font-semibold">
-            {activeChatroom || currentFriend?.username || (activeServer ? '' : 'Home')}
+            {activeChatroom || currentFriend?.username || 'Home'}
           </span>
         </div>
         {activeChatroomId && serverId && !currentFriend && activeChatroomType === 'text' && (
@@ -1633,12 +1636,7 @@ export default function DashboardClient({
             </div>
           </div>
         )}
-        {/* Loading spinner while restoring chatroom */}
-        {activeServer && !activeChatroomId && !currentFriend && isRestoringChatroom && (
-          <div className="flex flex-1 items-center justify-center">
-            <div className="h-16 w-16 animate-spin rounded-full border-4 border-gray-600 border-t-yellow-400" />
-          </div>
-        )}
+        </>)}
       </div>
       {modal === 'create' && (
         <CreateServer userId={id} onClose={() => setModal(null)} onSuccess={() => setModal(null)} />

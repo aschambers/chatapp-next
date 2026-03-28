@@ -255,7 +255,7 @@ export default function ServerChannelList({
     <div className="flex flex-col h-full">
       {/* Server header */}
       <div
-        className="relative border-b border-gray-600 px-4 py-3"
+        className={`relative px-4 py-3 ${serverName ? 'border-b border-gray-600' : ''}`}
         onMouseDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
       >
