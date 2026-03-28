@@ -76,7 +76,9 @@ function saveStatusCookie(status: UserStatus, expiresAt: number | null) {
     return;
   }
   const value = encodeURIComponent(JSON.stringify({ status, expiresAt }));
-  const maxAge = expiresAt ? Math.max(1, Math.floor((expiresAt - Date.now()) / 1000)) : 30 * 24 * 3600;
+  const maxAge = expiresAt
+    ? Math.max(1, Math.floor((expiresAt - Date.now()) / 1000))
+    : 30 * 24 * 3600;
   document.cookie = `${STATUS_COOKIE}=${value}; path=/; max-age=${maxAge}`;
 }
 
@@ -1204,7 +1206,7 @@ export default function DashboardClient({
           </div>
         )}
         {/* Always-visible user panel */}
-        <div className="flex-shrink-0 flex items-center gap-1.5 border-t border-r border-gray-600 bg-gray-800 px-3 h-14">
+        <div className="flex-shrink-0 flex items-center gap-2 border-t border-r border-gray-600 bg-gray-800 px-3 h-16">
           <Tooltip text="View profile">
             <button
               className="relative flex-shrink-0"
@@ -1217,7 +1219,7 @@ export default function DashboardClient({
                 })
               }
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-900 ring-1 ring-gray-600 text-xs font-bold text-white overflow-hidden hover:opacity-80 transition-opacity">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 ring-1 ring-gray-600 text-sm font-bold text-white overflow-hidden hover:opacity-80 transition-opacity">
                 {currentUser.imageUrl ? (
                   <img
                     src={currentUser.imageUrl}
@@ -1237,7 +1239,7 @@ export default function DashboardClient({
           </Tooltip>
           <div className="flex flex-1 min-w-0 flex-col">
             <span
-              className="truncate text-xs font-semibold"
+              className="truncate text-sm font-semibold"
               style={{ color: currentUser.nameColor || '#fde047' }}
             >
               {username}
@@ -1322,12 +1324,12 @@ export default function DashboardClient({
                   if (voiceConnected) voiceRoomRef.current?.toggleMute();
                   else setVoiceMuted((v) => !v);
                 }}
-                className={`flex items-center rounded p-1 transition-colors ${voiceMuted || voiceDeafened ? 'text-red-400 hover:text-red-300' : 'text-gray-400 hover:text-white'}`}
+                className={`flex items-center rounded p-2 transition-colors ${voiceMuted || voiceDeafened ? 'text-red-400 hover:text-red-300' : 'text-gray-400 hover:text-white'}`}
               >
                 {voiceMuted || voiceDeafened ? (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="w-3.5 h-3.5"
+                    className="w-5 h-5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -1344,7 +1346,7 @@ export default function DashboardClient({
                 ) : (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="w-3.5 h-3.5"
+                    className="w-5 h-5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -1364,12 +1366,12 @@ export default function DashboardClient({
             <Tooltip text={voiceDeafened ? 'Undeafen' : 'Deafen'}>
               <button
                 onClick={() => setVoiceDeafened((v) => !v)}
-                className={`flex items-center rounded p-1 transition-colors ${voiceDeafened ? 'text-red-400 hover:text-red-300' : 'text-gray-400 hover:text-white'}`}
+                className={`flex items-center rounded p-2 transition-colors ${voiceDeafened ? 'text-red-400 hover:text-red-300' : 'text-gray-400 hover:text-white'}`}
               >
                 {voiceDeafened ? (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="w-3.5 h-3.5"
+                    className="w-5 h-5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -1384,7 +1386,7 @@ export default function DashboardClient({
                 ) : (
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
-                    className="w-3.5 h-3.5"
+                    className="w-5 h-5"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -1401,11 +1403,11 @@ export default function DashboardClient({
             <Tooltip text="Settings">
               <button
                 onClick={() => setShowUserSettings(true)}
-                className="flex items-center rounded p-1 text-gray-400 hover:text-white"
+                className="flex items-center rounded p-2 text-gray-400 hover:text-white"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="w-3.5 h-3.5"
+                  className="w-5 h-5"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -1415,27 +1417,6 @@ export default function DashboardClient({
                 >
                   <circle cx="12" cy="12" r="3" />
                   <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                </svg>
-              </button>
-            </Tooltip>
-            <Tooltip text="Logout">
-              <button
-                onClick={handleLogout}
-                className="flex items-center rounded p-1 text-gray-400 hover:text-red-400"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="w-3.5 h-3.5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
                 </svg>
               </button>
             </Tooltip>
@@ -1452,7 +1433,7 @@ export default function DashboardClient({
             const startWidth = sidebarWidth;
             const onMove = (me: MouseEvent) => {
               if (!sidebarResizing.current) return;
-              const next = Math.min(400, Math.max(160, startWidth + me.clientX - startX));
+              const next = Math.min(400, Math.max(250, startWidth + me.clientX - startX));
               setSidebarWidth(next);
               document.cookie = `sidebarWidth=${next};path=/;max-age=31536000`;
             };
@@ -1698,6 +1679,7 @@ export default function DashboardClient({
         <UserSettings
           user={currentUser}
           onClose={() => setShowUserSettings(false)}
+          onLogout={handleLogout}
           onSaved={(updated) => {
             setCurrentUser((u) => ({ ...u, ...updated }));
             dispatch(

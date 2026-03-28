@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   try {
     const cookieStore = await cookies();
     const sw = cookieStore.get('sidebarWidth')?.value;
-    if (sw) initialSidebarWidth = Math.min(400, Math.max(160, parseInt(sw, 10)));
+    if (sw) initialSidebarWidth = Math.min(400, Math.max(250, parseInt(sw, 10)));
     const raw = cookieStore.get('dashboard_selection')?.value;
     if (raw) {
       const sel = JSON.parse(decodeURIComponent(raw));

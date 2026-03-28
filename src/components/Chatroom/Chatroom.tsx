@@ -741,9 +741,9 @@ export default function Chatroom({
       )}
 
       {/* Chat area */}
-      <div className="relative flex flex-1 flex-col">
+      <div className="relative flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <div className="flex h-12 items-center gap-2 border-b border-gray-600 px-4 font-semibold">
+        <div className="flex h-12 items-center gap-1 border-b border-gray-600 px-2 font-semibold min-w-0">
           <span className="cursor-pointer text-gray-400 flex items-center" onClick={startCall}>
             {activeChatroomType === 'text' ? (
               '#'
@@ -764,13 +764,13 @@ export default function Chatroom({
               </svg>
             )}
           </span>
-          <span className="flex-1 cursor-pointer" onClick={startCall}>
+          <span className="flex-1 min-w-0 truncate cursor-pointer" onClick={startCall}>
             {activeChatroom}
           </span>
           <Tooltip text="Pinned messages" position="bottom">
             <button
               onClick={() => setShowPinnedPanel((v) => !v)}
-              className="flex items-center justify-center h-8 w-8 rounded hover:bg-gray-600 text-gray-400 hover:text-white"
+              className="flex-shrink-0 flex items-center justify-center h-8 w-8 rounded hover:bg-gray-600 text-gray-400 hover:text-white"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -791,7 +791,7 @@ export default function Chatroom({
           <Tooltip text="Members" position="bottom">
             <button
               onClick={() => setShowMobileMembers((v) => !v)}
-              className="md:hidden flex items-center justify-center h-8 w-8 rounded bg-gray-600 hover:bg-gray-500 text-white"
+              className="md:hidden flex-shrink-0 flex items-center justify-center h-8 w-8 rounded bg-gray-600 hover:bg-gray-500 text-white"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -814,7 +814,7 @@ export default function Chatroom({
         </div>
 
         {/* Messages */}
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="flex min-h-full flex-col justify-end p-4">
             {messages.map((item, index) => {
               const canModerate =
@@ -872,7 +872,7 @@ export default function Chatroom({
                     }
                   }}
                 >
-                  <div className="flex gap-3 items-start">
+                  <div className="flex gap-3 items-start min-w-0">
                     {/* Avatar */}
                     <div
                       className="flex-shrink-0 mt-1 h-9 w-9 rounded-full bg-gray-900 ring-1 ring-gray-600 overflow-hidden flex items-center justify-center text-sm font-bold text-white cursor-pointer"
@@ -905,9 +905,9 @@ export default function Chatroom({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         {item.isPinned && (
-                          <span className="text-gray-400" title="Pinned">
+                          <span className="flex-shrink-0 text-gray-400" title="Pinned">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
                               className="h-3 w-3"
@@ -925,7 +925,7 @@ export default function Chatroom({
                           </span>
                         )}
                         <span
-                          className="font-semibold cursor-pointer hover:underline"
+                          className="font-semibold cursor-pointer hover:underline truncate max-w-[40%] sm:max-w-[60%]"
                           style={{
                             color:
                               serverUserList.find((u) => u.username === item.username)?.nameColor ||
@@ -950,7 +950,7 @@ export default function Chatroom({
                         >
                           {item.username}
                         </span>
-                        <span className="text-xs text-gray-400">
+                        <span className="flex-shrink-0 whitespace-nowrap text-xs text-gray-400">
                           {formatMessageTime(item.updatedAt)}
                         </span>
                       </div>
@@ -1079,7 +1079,7 @@ export default function Chatroom({
                               className="mt-1 max-w-xs max-h-64 rounded-lg object-contain"
                             />
                           ) : (
-                            <p className="text-sm text-gray-200 whitespace-pre-wrap">
+                            <p className="text-sm text-gray-200 whitespace-pre-wrap break-words">
                               {item.message}
                             </p>
                           )}
@@ -1134,7 +1134,7 @@ export default function Chatroom({
                           {threadCounts[item.id] > 0 && (
                             <div
                               onClick={() => openThread(item)}
-                              className="mt-2 flex max-w-sm cursor-pointer items-center gap-2 rounded border border-gray-600 bg-gray-700/40 px-3 py-2 transition-colors hover:border-indigo-500/50 hover:bg-gray-700"
+                              className="mt-2 flex w-full max-w-full cursor-pointer items-center gap-2 rounded border border-gray-600 bg-gray-700/40 px-3 py-2 transition-colors hover:border-indigo-500/50 hover:bg-gray-700"
                             >
                               <span className="flex-shrink-0 text-sm">🧵</span>
                               <p className="min-w-0 flex-1 truncate text-xs font-semibold text-indigo-400">
@@ -1408,7 +1408,7 @@ export default function Chatroom({
 
         {/* Input bar */}
         <div
-          className={`relative z-[2] flex items-end gap-2 px-3 py-2 min-h-[3.5rem] ${editingMessage && isMobile ? 'border-t-0' : 'border-t border-gray-600'}`}
+          className={`relative z-[2] flex items-center gap-2 px-3 py-3 min-h-[4rem] ${editingMessage && isMobile ? 'border-t-0' : 'border-t border-gray-600'}`}
         >
           <input
             type="file"
@@ -1542,10 +1542,24 @@ export default function Chatroom({
             </button>
           ) : (
             <button
-              className="text-gray-400 hover:text-white"
+              className="text-gray-400 hover:text-white flex items-center"
               onClick={() => setShowEmojiPicker((p) => !p)}
             >
-              😊
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                <line x1="9" y1="9" x2="9.01" y2="9" />
+                <line x1="15" y1="9" x2="15.01" y2="9" />
+              </svg>
             </button>
           )}
         </div>
@@ -1725,7 +1739,7 @@ export default function Chatroom({
           </div>
           <div className="border-b-2 border-indigo-500/40 bg-indigo-500/5 p-3">
             <span
-              className="text-xs font-semibold"
+              className="text-xs font-semibold block truncate max-w-[40%] sm:max-w-[60%]"
               style={{
                 color:
                   serverUserList.find((u) => u.username === activeThread.username)?.nameColor ||
@@ -1756,9 +1770,9 @@ export default function Chatroom({
                   }}
                   onMouseLeave={() => setThreadHover('')}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
                     <span
-                      className="text-xs font-semibold"
+                      className="text-xs font-semibold truncate max-w-[40%] sm:max-w-[60%]"
                       style={{
                         color:
                           serverUserList.find((u) => u.username === msg.username)?.nameColor ||
@@ -1768,7 +1782,7 @@ export default function Chatroom({
                     >
                       {msg.username}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="flex-shrink-0 whitespace-nowrap text-xs text-gray-400">
                       {formatMessageTime(msg.updatedAt)}
                     </span>
                     {threadHover === tKey && canEdit && (

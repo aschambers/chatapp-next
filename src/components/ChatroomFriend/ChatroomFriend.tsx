@@ -900,7 +900,7 @@ export default function ChatroomFriend({
 
       {/* Input bar */}
       <div
-        className={`relative z-[2] flex items-end gap-2 px-3 py-2 min-h-[3.5rem] ${editingMessage && isMobile ? 'border-t-0' : 'border-t border-gray-600'}`}
+        className={`relative z-[2] flex items-center gap-2 px-3 py-3 min-h-[4rem] ${editingMessage && isMobile ? 'border-t-0' : 'border-t border-gray-600'}`}
       >
         <input
           type="file"

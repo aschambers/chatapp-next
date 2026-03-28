@@ -9,6 +9,7 @@ import { JWTPayload } from '@/lib/auth';
 interface Props {
   user: JWTPayload;
   onClose: () => void;
+  onLogout?: () => void;
   onSaved: (updated: {
     username?: string;
     email?: string;
@@ -61,7 +62,7 @@ const isReadable = (color: string) => contrastRatio(color, BG) >= 3;
 
 type Tab = 'profile' | 'notifications' | 'privacy';
 
-export default function UserSettings({ user, onClose, onSaved }: Props) {
+export default function UserSettings({ user, onClose, onLogout, onSaved }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>('profile');
@@ -181,7 +182,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-lg bg-gray-800 shadow-xl"
+        className="flex flex-col w-[90vw] max-w-md max-h-[90vh] rounded-lg bg-gray-800 shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -212,7 +213,7 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
           ))}
         </div>
 
-        <div className="p-6">
+        <div className="flex-1 overflow-y-auto p-6">
           {/* Profile Tab */}
           {tab === 'profile' && (
             <>
@@ -498,24 +499,50 @@ export default function UserSettings({ user, onClose, onSaved }: Props) {
             </>
           )}
         </div>
-        <div className="border-t border-gray-700 py-3 text-center text-xs text-gray-500">
-          <a
-            href="/terms"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-gray-300"
-          >
-            Terms of Service
-          </a>{' '}
-          ·{' '}
-          <a
-            href="/privacy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-gray-300"
-          >
-            Privacy Policy
-          </a>
+        <div className="border-t border-gray-700 px-6 py-3 flex items-center justify-between text-xs text-gray-500">
+          {onLogout ? (
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1.5 text-red-400 hover:text-red-300 transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              Log out
+            </button>
+          ) : (
+            <span />
+          )}
+          <div>
+            <a
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-300"
+            >
+              Terms of Service
+            </a>{' '}
+            ·{' '}
+            <a
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-300"
+            >
+              Privacy Policy
+            </a>
+          </div>
         </div>
       </div>
     </div>
