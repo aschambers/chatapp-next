@@ -1468,175 +1468,177 @@ export default function DashboardClient({
           <div className="flex flex-1 items-center justify-center">
             <div className="h-16 w-16 animate-spin rounded-full border-4 border-gray-600 border-t-yellow-400" />
           </div>
-        ) : (<>
-        {/* Mobile top bar */}
-        <div className="flex md:hidden items-center gap-2 border-b border-gray-600 bg-gray-700 px-3 py-2 flex-shrink-0">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="text-gray-300 hover:text-white text-xl leading-none px-1"
-          >
-            ‹
-          </button>
-          <span className="truncate text-sm font-semibold">
-            {activeChatroom || currentFriend?.username || 'Home'}
-          </span>
-        </div>
-        {activeChatroomId && serverId && !currentFriend && activeChatroomType === 'text' && (
-          <Chatroom
-            userId={id}
-            username={username}
-            currentUserImageUrl={currentUser?.imageUrl ?? null}
-            activeChatroom={activeChatroom}
-            activeChatroomId={activeChatroomId}
-            activeChatroomType={activeChatroomType}
-            serverId={serverId}
-            isAdmin={isAdmin}
-            serverUserList={serverUserList}
-            onlineUsers={onlineUsers}
-            onStartDM={handleStartDM}
-            onEditProfile={() => setShowUserSettings(true)}
-            nameColor={currentUser.nameColor}
-            onAddFriend={handleAddFriend}
-            onAcceptRequest={handleAcceptRequest}
-            onUnfriend={handleUnfriend}
-            serverImageUrl={activeServer?.imageUrl ?? null}
-            serverName={activeServer?.name}
-            onNavigateToChannel={handleNavigateToChannel}
-            onNavigateToDM={handleNavigateToDM}
-            scrollToMessageId={scrollToMessageId}
-            onScrollHandled={() => setScrollToMessageId(null)}
-          />
-        )}
-        {activeChatroomId && serverId && !currentFriend && activeChatroomType === 'voice' && (
-          <div className="flex flex-1 min-h-0 overflow-hidden">
-            <VoiceRoom
-              ref={voiceRoomRef}
-              username={username}
-              activeChatroom={activeChatroom}
-              activeChatroomId={activeChatroomId}
-              serverId={serverId}
-              autoJoin={pendingAutoJoin}
-              onAutoJoined={() => setPendingAutoJoin(false)}
-              onInVoiceChange={(v) => {
-                setVoiceConnected(v);
-                if (!v) {
-                  setVoiceMuted(false);
-                  setVoiceDeafened(false);
-                }
-              }}
-              onMutedChange={setVoiceMuted}
-              deafened={voiceDeafened}
-              onDeafenToggle={() => setVoiceDeafened((v) => !v)}
-              onDeafenedUsersChange={setVoiceDeafenedUsers}
-              userImages={Object.fromEntries([
-                ...serverUserList.map(
-                  (u) => [u.username, u.imageUrl ?? null] as [string, string | null]
-                ),
-                [username, currentUser?.imageUrl ?? null],
-              ])}
-              onChatToggle={() => setShowVoiceChat((v) => !v)}
-              chatOpen={showVoiceChat}
-            />
-            {showVoiceChat && (
-              <div className="flex w-80 flex-shrink-0 flex-col border-l border-gray-600">
-                <Chatroom
-                  userId={id}
+        ) : (
+          <>
+            {/* Mobile top bar */}
+            <div className="flex md:hidden items-center gap-2 border-b border-gray-600 bg-gray-700 px-3 py-2 flex-shrink-0">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="text-gray-300 hover:text-white text-xl leading-none px-1"
+              >
+                ‹
+              </button>
+              <span className="truncate text-sm font-semibold">
+                {activeChatroom || currentFriend?.username || 'Home'}
+              </span>
+            </div>
+            {activeChatroomId && serverId && !currentFriend && activeChatroomType === 'text' && (
+              <Chatroom
+                userId={id}
+                username={username}
+                currentUserImageUrl={currentUser?.imageUrl ?? null}
+                activeChatroom={activeChatroom}
+                activeChatroomId={activeChatroomId}
+                activeChatroomType={activeChatroomType}
+                serverId={serverId}
+                isAdmin={isAdmin}
+                serverUserList={serverUserList}
+                onlineUsers={onlineUsers}
+                onStartDM={handleStartDM}
+                onEditProfile={() => setShowUserSettings(true)}
+                nameColor={currentUser.nameColor}
+                onAddFriend={handleAddFriend}
+                onAcceptRequest={handleAcceptRequest}
+                onUnfriend={handleUnfriend}
+                serverImageUrl={activeServer?.imageUrl ?? null}
+                serverName={activeServer?.name}
+                onNavigateToChannel={handleNavigateToChannel}
+                onNavigateToDM={handleNavigateToDM}
+                scrollToMessageId={scrollToMessageId}
+                onScrollHandled={() => setScrollToMessageId(null)}
+              />
+            )}
+            {activeChatroomId && serverId && !currentFriend && activeChatroomType === 'voice' && (
+              <div className="flex flex-1 min-h-0 overflow-hidden">
+                <VoiceRoom
+                  ref={voiceRoomRef}
                   username={username}
-                  currentUserImageUrl={currentUser?.imageUrl ?? null}
                   activeChatroom={activeChatroom}
                   activeChatroomId={activeChatroomId}
-                  activeChatroomType="text"
                   serverId={serverId}
-                  isAdmin={isAdmin}
-                  serverUserList={serverUserList}
-                  onlineUsers={onlineUsers}
-                  onStartDM={handleStartDM}
-                  onEditProfile={() => setShowUserSettings(true)}
-                  nameColor={currentUser.nameColor}
-                  onAddFriend={handleAddFriend}
-                  onAcceptRequest={handleAcceptRequest}
-                  onUnfriend={handleUnfriend}
-                  serverImageUrl={activeServer?.imageUrl ?? null}
-                  serverName={activeServer?.name}
-                  onNavigateToChannel={handleNavigateToChannel}
-                  onNavigateToDM={handleNavigateToDM}
-                  scrollToMessageId={scrollToMessageId}
-                  onScrollHandled={() => setScrollToMessageId(null)}
-                  hideMembers
+                  autoJoin={pendingAutoJoin}
+                  onAutoJoined={() => setPendingAutoJoin(false)}
+                  onInVoiceChange={(v) => {
+                    setVoiceConnected(v);
+                    if (!v) {
+                      setVoiceMuted(false);
+                      setVoiceDeafened(false);
+                    }
+                  }}
+                  onMutedChange={setVoiceMuted}
+                  deafened={voiceDeafened}
+                  onDeafenToggle={() => setVoiceDeafened((v) => !v)}
+                  onDeafenedUsersChange={setVoiceDeafenedUsers}
+                  userImages={Object.fromEntries([
+                    ...serverUserList.map(
+                      (u) => [u.username, u.imageUrl ?? null] as [string, string | null]
+                    ),
+                    [username, currentUser?.imageUrl ?? null],
+                  ])}
+                  onChatToggle={() => setShowVoiceChat((v) => !v)}
+                  chatOpen={showVoiceChat}
                 />
+                {showVoiceChat && (
+                  <div className="flex w-80 flex-shrink-0 flex-col border-l border-gray-600">
+                    <Chatroom
+                      userId={id}
+                      username={username}
+                      currentUserImageUrl={currentUser?.imageUrl ?? null}
+                      activeChatroom={activeChatroom}
+                      activeChatroomId={activeChatroomId}
+                      activeChatroomType="text"
+                      serverId={serverId}
+                      isAdmin={isAdmin}
+                      serverUserList={serverUserList}
+                      onlineUsers={onlineUsers}
+                      onStartDM={handleStartDM}
+                      onEditProfile={() => setShowUserSettings(true)}
+                      nameColor={currentUser.nameColor}
+                      onAddFriend={handleAddFriend}
+                      onAcceptRequest={handleAcceptRequest}
+                      onUnfriend={handleUnfriend}
+                      serverImageUrl={activeServer?.imageUrl ?? null}
+                      serverName={activeServer?.name}
+                      onNavigateToChannel={handleNavigateToChannel}
+                      onNavigateToDM={handleNavigateToDM}
+                      scrollToMessageId={scrollToMessageId}
+                      onScrollHandled={() => setScrollToMessageId(null)}
+                      hideMembers
+                    />
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
-        {currentFriend && (
-          <ChatroomFriend
-            userId={id}
-            username={username}
-            friendUsername={
-              currentFriend.friendId === id ? 'Saved Messages' : currentFriend.username
-            }
-            currentUserImageUrl={currentUser?.imageUrl ?? null}
-            friendId={currentFriend.friendId}
-            groupId={currentFriend.groupId}
-            isFriend={currentFriend.isFriend ?? false}
-            incomingRequest={
-              pendingRequests.find((r) => r.senderId === currentFriend.friendId) ?? null
-            }
-            onEditProfile={() => setShowUserSettings(true)}
-            nameColor={currentUser.nameColor}
-            onAddFriend={
-              currentFriend.friendId !== id
-                ? () => handleAddFriend(currentFriend.friendId!)
-                : undefined
-            }
-            onAcceptRequest={
-              currentFriend.friendId !== id
-                ? (requestId) => handleAcceptRequest(requestId)
-                : undefined
-            }
-            onUnfriend={
-              currentFriend.friendId !== id
-                ? () => handleUnfriend(currentFriend.friendId!)
-                : undefined
-            }
-            onNavigateToChannel={handleNavigateToChannel}
-            onNavigateToDM={handleNavigateToDM}
-            scrollToMessageId={scrollToMessageId}
-            onScrollHandled={() => setScrollToMessageId(null)}
-          />
-        )}
-        {/* Home screen: show create/join cards */}
-        {isHome && !currentFriend && (
-          <div className="flex flex-1 items-center justify-center p-4">
-            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg">
-              <div className="flex flex-1 flex-col items-center rounded-lg bg-gray-700 p-6 text-center">
-                <h2 className="mb-2 text-lg font-bold text-white">Create</h2>
-                <p className="mb-4 text-sm text-gray-400">
-                  Create a new server and invite other people to join!
-                </p>
-                <button
-                  onClick={() => setModal('create')}
-                  className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600"
-                >
-                  Create a server
-                </button>
+            {currentFriend && (
+              <ChatroomFriend
+                userId={id}
+                username={username}
+                friendUsername={
+                  currentFriend.friendId === id ? 'Saved Messages' : currentFriend.username
+                }
+                currentUserImageUrl={currentUser?.imageUrl ?? null}
+                friendId={currentFriend.friendId}
+                groupId={currentFriend.groupId}
+                isFriend={currentFriend.isFriend ?? false}
+                incomingRequest={
+                  pendingRequests.find((r) => r.senderId === currentFriend.friendId) ?? null
+                }
+                onEditProfile={() => setShowUserSettings(true)}
+                nameColor={currentUser.nameColor}
+                onAddFriend={
+                  currentFriend.friendId !== id
+                    ? () => handleAddFriend(currentFriend.friendId!)
+                    : undefined
+                }
+                onAcceptRequest={
+                  currentFriend.friendId !== id
+                    ? (requestId) => handleAcceptRequest(requestId)
+                    : undefined
+                }
+                onUnfriend={
+                  currentFriend.friendId !== id
+                    ? () => handleUnfriend(currentFriend.friendId!)
+                    : undefined
+                }
+                onNavigateToChannel={handleNavigateToChannel}
+                onNavigateToDM={handleNavigateToDM}
+                scrollToMessageId={scrollToMessageId}
+                onScrollHandled={() => setScrollToMessageId(null)}
+              />
+            )}
+            {/* Home screen: show create/join cards */}
+            {isHome && !currentFriend && (
+              <div className="flex flex-1 items-center justify-center p-4">
+                <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg">
+                  <div className="flex flex-1 flex-col items-center rounded-lg bg-gray-700 p-6 text-center">
+                    <h2 className="mb-2 text-lg font-bold text-white">Create</h2>
+                    <p className="mb-4 text-sm text-gray-400">
+                      Create a new server and invite other people to join!
+                    </p>
+                    <button
+                      onClick={() => setModal('create')}
+                      className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600"
+                    >
+                      Create a server
+                    </button>
+                  </div>
+                  <div className="flex flex-1 flex-col items-center rounded-lg bg-gray-700 p-6 text-center">
+                    <h2 className="mb-2 text-lg font-bold text-white">Join</h2>
+                    <p className="mb-4 text-sm text-gray-400">
+                      Enter a secret invite code to join an existing server!
+                    </p>
+                    <button
+                      onClick={() => setModal('join')}
+                      className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600"
+                    >
+                      Join a server
+                    </button>
+                  </div>
+                </div>
               </div>
-              <div className="flex flex-1 flex-col items-center rounded-lg bg-gray-700 p-6 text-center">
-                <h2 className="mb-2 text-lg font-bold text-white">Join</h2>
-                <p className="mb-4 text-sm text-gray-400">
-                  Enter a secret invite code to join an existing server!
-                </p>
-                <button
-                  onClick={() => setModal('join')}
-                  className="rounded bg-yellow-500 px-4 py-2 text-sm text-gray-900 hover:bg-yellow-600"
-                >
-                  Join a server
-                </button>
-              </div>
-            </div>
-          </div>
+            )}
+          </>
         )}
-        </>)}
       </div>
       {modal === 'create' && (
         <CreateServer userId={id} onClose={() => setModal(null)} onSuccess={() => setModal(null)} />
