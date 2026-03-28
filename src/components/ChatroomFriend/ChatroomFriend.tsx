@@ -682,7 +682,6 @@ export default function ChatroomFriend({
                                   setEditingMessage(item);
                                   setNewMessage(item.message);
                                   setEditMessage(null);
-                                  setMessageMenu(false);
                                 }}
                               >
                                 <svg
