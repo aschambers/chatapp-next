@@ -610,6 +610,7 @@ export default function DashboardClient({
   const isHome = !activeServer;
 
   // Drag left on sidebar → conversation panel slides in from the right on top
+  const sidebarRef = useRef<HTMLDivElement>(null);
   const sidebarDragRef = useRef({ active: false, startX: 0, startY: 0, moved: false });
   const mainSlideXRef = useRef<number | null>(null);
   const [mainSlideX, setMainSlideX] = useState<number | null>(null);
@@ -669,6 +670,17 @@ export default function DashboardClient({
     };
   }, []);
 
+  // Non-passive touchmove so e.preventDefault() can block native scroll during drag
+  useEffect(() => {
+    const el = sidebarRef.current;
+    if (!el) return;
+    const onTouchMove = (e: TouchEvent) => {
+      if (sidebarDragRef.current.active) e.preventDefault();
+    };
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    return () => el.removeEventListener('touchmove', onTouchMove);
+  }, []);
+
   const handleSidebarTouchStart = (e: React.TouchEvent) => {
     if (!currentFriend) return;
     if ((e.target as HTMLElement).closest('button, input, select, a, [role="button"]')) return;
@@ -724,7 +736,8 @@ export default function DashboardClient({
     <div className="flex h-[100dvh] overflow-hidden bg-gray-800 text-white">
       {/* Channel / DM sidebar */}
       <div
-        className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex fixed md:relative inset-0 md:inset-auto z-30 md:z-auto w-full md:w-[var(--sb-w)] flex-shrink-0 flex-col bg-gray-700`}
+        ref={sidebarRef}
+        className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex fixed md:relative inset-0 md:inset-auto z-30 md:z-auto w-full md:w-[var(--sb-w)] h-[100dvh] md:h-auto flex-shrink-0 flex-col bg-gray-700`}
         style={{ '--sb-w': `${sidebarWidth}px` } as React.CSSProperties}
         onMouseDown={(e) => {
           if (e.button !== 0) return;
