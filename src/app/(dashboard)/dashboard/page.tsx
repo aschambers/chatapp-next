@@ -14,6 +14,8 @@ export default async function DashboardPage() {
   let initialActiveServer: Server | null = null;
   let initialPendingChatroomId: number | null = null;
   let initialSidebarWidth = 256;
+  let initialUserStatus: 'online' | 'away' | 'busy' | 'offline' = 'online';
+  let initialStatusExpiresAt: number | null = null;
   try {
     const cookieStore = await cookies();
     const sw = cookieStore.get('sidebarWidth')?.value;
@@ -27,6 +29,14 @@ export default async function DashboardPage() {
       }
       if (initialActiveServer && sel.type === 'chatroom' && sel.chatroomId) {
         initialPendingChatroomId = sel.chatroomId;
+      }
+    }
+    const statusRaw = cookieStore.get('meshyve_user_status')?.value;
+    if (statusRaw) {
+      const { status, expiresAt } = JSON.parse(decodeURIComponent(statusRaw));
+      if (!expiresAt || Date.now() < expiresAt) {
+        initialUserStatus = status ?? 'online';
+        initialStatusExpiresAt = expiresAt ?? null;
       }
     }
   } catch {}
@@ -43,6 +53,8 @@ export default async function DashboardPage() {
       initialActiveServer={initialActiveServer}
       initialPendingChatroomId={initialPendingChatroomId}
       initialSidebarWidth={initialSidebarWidth}
+      initialUserStatus={initialUserStatus}
+      initialStatusExpiresAt={initialStatusExpiresAt}
     />
   );
 }

@@ -10,7 +10,6 @@ import {
   findServer,
   findUserList,
   resetServerValues,
-  patchUserNameColor,
   patchUserInList,
   kickServerUser,
 } from '@/lib/redux/modules/servers/servers';
@@ -49,6 +48,8 @@ interface Props {
   initialActiveServer: Server | null;
   initialPendingChatroomId: number | null;
   initialSidebarWidth?: number;
+  initialUserStatus?: UserStatus;
+  initialStatusExpiresAt?: number | null;
 }
 
 type UserStatus = 'online' | 'away' | 'busy' | 'offline';
@@ -59,6 +60,38 @@ function statusColor(s: UserStatus | undefined) {
   if (s === 'busy') return 'bg-red-500';
   return 'bg-gray-500';
 }
+
+function statusLabel(s: UserStatus) {
+  if (s === 'online') return 'Online';
+  if (s === 'away') return 'Away';
+  if (s === 'busy') return 'Do Not Disturb';
+  return 'Invisible';
+}
+
+const STATUS_COOKIE = 'meshyve_user_status';
+
+function saveStatusCookie(status: UserStatus, expiresAt: number | null) {
+  if (status === 'online') {
+    document.cookie = `${STATUS_COOKIE}=; path=/; max-age=0`;
+    return;
+  }
+  const value = encodeURIComponent(JSON.stringify({ status, expiresAt }));
+  const maxAge = expiresAt ? Math.max(1, Math.floor((expiresAt - Date.now()) / 1000)) : 30 * 24 * 3600;
+  document.cookie = `${STATUS_COOKIE}=${value}; path=/; max-age=${maxAge}`;
+}
+
+function clearStatusCookie() {
+  document.cookie = `${STATUS_COOKIE}=; path=/; max-age=0`;
+}
+
+const STATUS_DURATIONS = [
+  { label: 'For 15 Minutes', ms: 15 * 60 * 1000 },
+  { label: 'For 1 Hour', ms: 60 * 60 * 1000 },
+  { label: 'For 5 Hours', ms: 5 * 60 * 60 * 1000 },
+  { label: 'For 24 Hours', ms: 24 * 60 * 60 * 1000 },
+  { label: 'For 3 Days', ms: 3 * 24 * 60 * 60 * 1000 },
+  { label: 'Forever', ms: null },
+] as const;
 
 function formatRelative(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -94,6 +127,8 @@ export default function DashboardClient({
   initialActiveServer,
   initialPendingChatroomId,
   initialSidebarWidth = 256,
+  initialUserStatus = 'online',
+  initialStatusExpiresAt = null,
 }: Props) {
   const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
@@ -134,8 +169,11 @@ export default function DashboardClient({
   const [scrollToMessageId, setScrollToMessageId] = useState<number | null>(null);
   const [dmLastActivity, setDmLastActivity] = useState<Record<number, string>>({});
   const [isRestoringChatroom, setIsRestoringChatroom] = useState(initialPendingChatroomId !== null);
-  const [userStatus, setUserStatus] = useState<UserStatus>('online');
-  const [isAutomatic, setIsAutomatic] = useState(true);
+  const [userStatus, setUserStatus] = useState<UserStatus>(initialUserStatus);
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
+  const [statusSubMenu, setStatusSubMenu] = useState<UserStatus | null>(null);
+  const [statusExpiresAt, setStatusExpiresAt] = useState<number | null>(initialStatusExpiresAt);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
   const [onlineUsers, setOnlineUsers] = useState<Map<string, UserStatus>>(new Map());
   const [profileTarget, setProfileTarget] = useState<{
     userId: number;
@@ -143,11 +181,11 @@ export default function DashboardClient({
     imageUrl?: string | null;
     isSelf: boolean;
   } | null>(null);
-  const autoStatusRef = useRef<{ manual: boolean; timer: ReturnType<typeof setTimeout> | null }>({
-    manual: false,
+  const autoStatusRef = useRef<{ timer: ReturnType<typeof setTimeout> | null }>({
     timer: null,
   });
-  const userStatusRef = useRef<UserStatus>('online');
+  const userStatusRef = useRef<UserStatus>(initialUserStatus);
+  const statusManualRef = useRef(initialUserStatus !== 'online'); // true when user explicitly chose a non-online status
   const [sidebarWidth, setSidebarWidth] = useState(initialSidebarWidth);
   const sidebarResizing = useRef(false);
   const [showNewDM, setShowNewDM] = useState(false);
@@ -166,11 +204,6 @@ export default function DashboardClient({
   const [voiceDeafenedUsers, setVoiceDeafenedUsers] = useState<Record<string, boolean>>({});
   const [showVoiceChat, setShowVoiceChat] = useState(false);
   const voiceRoomRef = useRef<VoiceRoomHandle>(null);
-
-  // Keep autoStatusRef in sync with isAutomatic
-  useEffect(() => {
-    autoStatusRef.current.manual = !isAutomatic;
-  }, [isAutomatic]);
 
   const { id, email } = initialUser;
   const username = currentUser.username;
@@ -221,6 +254,7 @@ export default function DashboardClient({
     };
     const handleReconnect = () => {
       dispatch(findServer(id)).then(() => setServersFetched(true));
+      socket.emit('SET_STATUS', { username, status: userStatusRef.current });
     };
     const handleFriendRequest = (req: { senderUsername?: string }) => {
       dispatch(fetchPendingRequests(id));
@@ -254,7 +288,7 @@ export default function DashboardClient({
     socket.on('FRIEND_REMOVED', handleFriendRemoved);
     socket.on('VOICE_STATE_CHANGED', handleVoiceStateChanged);
     socket.on('VOICE_PARTICIPANTS', handleVoiceParticipants);
-    socket.emit('SEND_USER', { userId: id, username, status: 'online' });
+    socket.emit('SEND_USER', { userId: id, username, status: userStatusRef.current });
     socket.emit('GET_USERS');
     return () => {
       socket.off('RECEIVE_USERS', handleUsers);
@@ -363,18 +397,15 @@ export default function DashboardClient({
     }
   }, [chatrooms]);
 
-  const handleStatusChange = (value: UserStatus | 'automatic') => {
-    if (value === 'automatic') {
-      setIsAutomatic(true);
-      // autoStatusRef.manual synced via useEffect; timer will run on next activity
-      // immediately restore online
-      setUserStatus('online');
-      socket.emit('SET_STATUS', { username, status: 'online' });
-    } else {
-      setIsAutomatic(false);
-      setUserStatus(value);
-      socket.emit('SET_STATUS', { username, status: value });
-    }
+  const handleStatusChange = (value: UserStatus, durationMs?: number | null) => {
+    statusManualRef.current = value !== 'online';
+    setUserStatus(value);
+    socket.emit('SET_STATUS', { username, status: value });
+    const newExpiresAt = value !== 'online' && durationMs != null ? Date.now() + durationMs : null;
+    setStatusExpiresAt(newExpiresAt);
+    saveStatusCookie(value, newExpiresAt);
+    setStatusDropdownOpen(false);
+    setStatusSubMenu(null);
   };
 
   // Auto-status: away after 5 min inactivity, back to online on activity
@@ -382,19 +413,57 @@ export default function DashboardClient({
     userStatusRef.current = userStatus;
   }, [userStatus]);
 
+  // Status expiry timer
+  useEffect(() => {
+    if (!statusExpiresAt) return;
+    const remaining = statusExpiresAt - Date.now();
+    if (remaining <= 0) {
+      statusManualRef.current = false;
+      setUserStatus('online');
+      socket.emit('SET_STATUS', { username, status: 'online' });
+      setStatusExpiresAt(null);
+      clearStatusCookie();
+      return;
+    }
+    const timer = setTimeout(() => {
+      statusManualRef.current = false;
+      setUserStatus('online');
+      socket.emit('SET_STATUS', { username, status: 'online' });
+      setStatusExpiresAt(null);
+      clearStatusCookie();
+    }, remaining);
+    return () => clearTimeout(timer);
+  }, [statusExpiresAt, socket, username]);
+
+  // Close status dropdown on outside click
+  useEffect(() => {
+    if (!statusDropdownOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setStatusDropdownOpen(false);
+        setStatusSubMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [statusDropdownOpen]);
+
   useEffect(() => {
     const AWAY_MS = 60 * 1000;
 
     const resetTimer = () => {
-      if (autoStatusRef.current.manual) return;
       if (autoStatusRef.current.timer) clearTimeout(autoStatusRef.current.timer);
-      // If currently away due to inactivity, restore online
+      // Don't override a status the user explicitly chose
+      if (statusManualRef.current) return;
+      if (userStatusRef.current !== 'online' && userStatusRef.current !== 'away') return;
+      // If currently auto-away, restore online on activity
       if (userStatusRef.current === 'away') {
         setUserStatus('online');
         socket.emit('SET_STATUS', { username, status: 'online' });
       }
       autoStatusRef.current.timer = setTimeout(() => {
-        if (autoStatusRef.current.manual) return;
+        if (statusManualRef.current) return;
+        if (userStatusRef.current !== 'online') return;
         setUserStatus('away');
         socket.emit('SET_STATUS', { username, status: 'away' });
       }, AWAY_MS);
@@ -411,6 +480,7 @@ export default function DashboardClient({
 
   const handleLogout = async () => {
     socket.emit('LOGOUT_USER', { username });
+    clearStatusCookie();
     clearSelection();
     await dispatch(userLogout({ id }));
     router.push('/login');
@@ -1172,17 +1242,77 @@ export default function DashboardClient({
             >
               {username}
             </span>
-            <select
-              value={isAutomatic ? 'automatic' : userStatus}
-              onChange={(e) => handleStatusChange(e.target.value as UserStatus | 'automatic')}
-              className="w-auto max-w-fit bg-transparent text-xs text-gray-400 outline-none cursor-pointer"
-            >
-              <option value="automatic">Automatic</option>
-              <option value="online">Online</option>
-              <option value="away">Away</option>
-              <option value="busy">Busy</option>
-              <option value="offline">Invisible</option>
-            </select>
+            <div ref={statusDropdownRef} className="relative">
+              <button
+                onClick={() => setStatusDropdownOpen((v) => !v)}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+              >
+                {statusLabel(userStatus)}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-3 h-3"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="18 15 12 9 6 15" />
+                </svg>
+              </button>
+              {statusDropdownOpen && (
+                <div className="absolute bottom-full left-0 mb-1 bg-gray-800 rounded shadow-xl py-1 min-w-40 z-[9999] border border-gray-700">
+                  {/* Online — no submenu */}
+                  <button
+                    onClick={() => handleStatusChange('online')}
+                    className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-700 transition-colors"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                    Online
+                  </button>
+                  {/* Statuses with duration submenus */}
+                  {(['away', 'busy', 'offline'] as UserStatus[]).map((s) => (
+                    <div
+                      key={s}
+                      className="relative"
+                      onMouseEnter={() => setStatusSubMenu(s)}
+                      onMouseLeave={() => setStatusSubMenu(null)}
+                    >
+                      <button className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-700 transition-colors">
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColor(s)}`} />
+                        <span className="flex-1 text-left">{statusLabel(s)}</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-3 h-3 text-gray-400"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                      </button>
+                      {statusSubMenu === s && (
+                        <div className="absolute left-full bottom-0 bg-gray-800 rounded shadow-xl py-1 min-w-36 z-[9999] border border-gray-700">
+                          {STATUS_DURATIONS.map((d) => (
+                            <button
+                              key={d.label}
+                              onClick={() => handleStatusChange(s, d.ms)}
+                              className="flex items-center w-full px-3 py-1.5 text-xs text-gray-200 hover:bg-gray-700 transition-colors whitespace-nowrap"
+                            >
+                              {d.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-center flex-shrink-0 gap-2 md:gap-0">
             {/* Mic toggle */}
