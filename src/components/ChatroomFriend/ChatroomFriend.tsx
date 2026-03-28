@@ -135,6 +135,10 @@ export default function ChatroomFriend({
   const menuRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(navigator.maxTouchPoints > 0);
+  }, []);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [friendReqStatus, setFriendReqStatus] = useState<'none' | 'sent' | 'incoming' | 'friends'>(
@@ -798,7 +802,7 @@ export default function ChatroomFriend({
                             className="mt-1 max-w-xs max-h-64 rounded-lg object-contain"
                           />
                         ) : (
-                          <p className="text-sm text-gray-200">{highlight(item.message)}</p>
+                          <p className="text-sm text-gray-200 whitespace-pre-wrap">{highlight(item.message)}</p>
                         )}
                         {item.reactions && Object.keys(item.reactions).length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -917,23 +921,39 @@ export default function ChatroomFriend({
             </div>
           )}
         </div>
-        <input
-          className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none"
+        <textarea
+          enterKeyHint={isMobile ? 'newline' : 'send'}
+          rows={1}
+          className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none resize-none leading-5"
           placeholder="Send a message!"
           value={message}
           onChange={(e) => {
             if (e.target.value.length < 500) setMessage(e.target.value);
           }}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) sendMessage();
+            if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
+              e.preventDefault();
+              sendMessage();
+            }
           }}
         />
-        <button
-          className="text-gray-400 hover:text-white"
-          onClick={() => setShowEmojiPicker((p) => !p)}
-        >
-          😊
-        </button>
+        {message && isMobile ? (
+          <button
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow hover:opacity-90 transition-opacity"
+            onClick={sendMessage}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
+        ) : (
+          <button
+            className="text-gray-400 hover:text-white"
+            onClick={() => setShowEmojiPicker((p) => !p)}
+          >
+            😊
+          </button>
+        )}
       </div>
       {mobileMenu && editMessage && (
         <MessageContextMenu

@@ -1,8 +1,8 @@
 import '../../__mocks__/socketMock';
 import { render } from '@testing-library/react';
 
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => '/',
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -10,7 +10,7 @@ import { Provider } from 'react-redux';
 import { mockStore } from '../../__mocks__/reduxMock';
 import DashboardClient from './DashboardClient';
 
-global.fetch = jest.fn(() => Promise.resolve({ json: () => Promise.resolve([]) })) as jest.Mock;
+global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve([]) })) as vi.Mock;
 
 const user = {
   id: 1,

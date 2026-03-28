@@ -1,12 +1,12 @@
 const socketMock = {
-  on: jest.fn(),
-  off: jest.fn(),
-  once: jest.fn(),
-  emit: jest.fn(),
-  disconnect: jest.fn(),
+  on: vi.fn(),
+  off: vi.fn(),
+  once: vi.fn(),
+  emit: vi.fn(),
+  disconnect: vi.fn(),
 };
 
-jest.mock('@/lib/socket', () => ({
+vi.mock('@/lib/socket', () => ({
   getSocket: () => socketMock,
 }));
 

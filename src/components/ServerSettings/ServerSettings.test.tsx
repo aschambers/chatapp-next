@@ -3,7 +3,7 @@ import { Provider } from 'react-redux';
 import { mockStore } from '../../__mocks__/reduxMock';
 import ServerSettings from './ServerSettings';
 
-global.fetch = jest.fn(() => Promise.resolve({ json: () => Promise.resolve({}) })) as jest.Mock;
+global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({}) })) as vi.Mock;
 
 it('renders without crashing', () => {
   render(
@@ -13,8 +13,8 @@ it('renders without crashing', () => {
         serverName="Test"
         currentUsername="user"
         userId={1}
-        onClose={jest.fn()}
-        onServerDeleted={jest.fn()}
+        onClose={vi.fn()}
+        onServerDeleted={vi.fn()}
       />
     </Provider>
   );

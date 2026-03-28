@@ -6,7 +6,7 @@ import InviteModal from './InviteModal';
 it('renders without crashing', () => {
   render(
     <Provider store={mockStore}>
-      <InviteModal serverId={1} onClose={jest.fn()} />
+      <InviteModal serverId={1} onClose={vi.fn()} />
     </Provider>
   );
 });

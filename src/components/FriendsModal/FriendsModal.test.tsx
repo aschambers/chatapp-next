@@ -8,11 +8,11 @@ it('renders without crashing', () => {
       currentUserId={1}
       onlineUsers={new Map()}
       pendingRequests={[]}
-      onClose={jest.fn()}
-      onMessage={jest.fn()}
-      onUnfriend={jest.fn()}
-      onAcceptRequest={jest.fn()}
-      onDeclineRequest={jest.fn()}
+      onClose={vi.fn()}
+      onMessage={vi.fn()}
+      onUnfriend={vi.fn()}
+      onAcceptRequest={vi.fn()}
+      onDeclineRequest={vi.fn()}
     />
   );
 });

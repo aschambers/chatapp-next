@@ -18,13 +18,13 @@ it('renders without crashing', () => {
         voiceMuted={false}
         voiceDeafened={false}
         voiceDeafenedUsers={{}}
-        onVoiceMuteToggle={jest.fn()}
-        onVoiceDeafenToggle={jest.fn()}
-        onSelectChatroom={jest.fn()}
-        onJoinVoice={jest.fn()}
-        onOpenVoiceChat={jest.fn()}
-        onOpenSettings={jest.fn()}
-        onLeaveServer={jest.fn()}
+        onVoiceMuteToggle={vi.fn()}
+        onVoiceDeafenToggle={vi.fn()}
+        onSelectChatroom={vi.fn()}
+        onJoinVoice={vi.fn()}
+        onOpenVoiceChat={vi.fn()}
+        onOpenSettings={vi.fn()}
+        onLeaveServer={vi.fn()}
       />
     </Provider>
   );

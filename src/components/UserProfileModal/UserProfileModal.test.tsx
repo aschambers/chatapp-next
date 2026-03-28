@@ -1,8 +1,8 @@
 import { render } from '@testing-library/react';
 import UserProfileModal from './UserProfileModal';
 
-global.fetch = jest.fn(() => Promise.resolve({ json: () => Promise.resolve({}) })) as jest.Mock;
+global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve({}) })) as vi.Mock;
 
 it('renders without crashing', () => {
-  render(<UserProfileModal userId={1} username="user" isSelf onClose={jest.fn()} />);
+  render(<UserProfileModal userId={1} username="user" isSelf onClose={vi.fn()} />);
 });

@@ -6,7 +6,7 @@ import CreateServer from './CreateServer';
 it('renders without crashing', () => {
   render(
     <Provider store={mockStore}>
-      <CreateServer userId={1} onClose={jest.fn()} onSuccess={jest.fn()} />
+      <CreateServer userId={1} onClose={vi.fn()} onSuccess={vi.fn()} />
     </Provider>
   );
 });

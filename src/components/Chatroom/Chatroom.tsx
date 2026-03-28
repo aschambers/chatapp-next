@@ -135,7 +135,11 @@ export default function Chatroom({
   const threadScrollRef = useRef<HTMLDivElement>(null);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
   const plusMenuRef = useRef<HTMLDivElement>(null);
-  const messageInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    setIsMobile(navigator.maxTouchPoints > 0);
+  }, []);
   const openThreadRef = useRef<(msg: Message) => void>(() => {});
   const [isNewThread, setIsNewThread] = useState(false);
   const [newThreadDraft, setNewThreadDraft] = useState('');
@@ -1027,7 +1031,7 @@ export default function Chatroom({
                               className="mt-1 max-w-xs max-h-64 rounded-lg object-contain"
                             />
                           ) : (
-                            <p className="text-sm text-gray-200">{item.message}</p>
+                            <p className="text-sm text-gray-200 whitespace-pre-wrap">{item.message}</p>
                           )}
                           {item.reactions && Object.keys(item.reactions).length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
@@ -1462,9 +1466,11 @@ export default function Chatroom({
               </div>
             )}
           </div>
-          <input
+          <textarea
             ref={messageInputRef}
-            className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+            enterKeyHint={isMobile ? 'newline' : 'send'}
+            rows={1}
+            className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed leading-5"
             placeholder={
               slowmodeCooldown > 0 ? `Slowmode — wait ${slowmodeCooldown}s` : 'Send a message!'
             }
@@ -1474,15 +1480,30 @@ export default function Chatroom({
               if (e.target.value.length < 500) setMessage(e.target.value);
             }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) sendMessage();
+              if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
+                e.preventDefault();
+                sendMessage();
+              }
             }}
           />
-          <button
-            className="text-gray-400 hover:text-white"
-            onClick={() => setShowEmojiPicker((p) => !p)}
-          >
-            😊
-          </button>
+          {message && isMobile ? (
+            <button
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow hover:opacity-90 transition-opacity disabled:opacity-40"
+              onClick={sendMessage}
+              disabled={slowmodeCooldown > 0}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              className="text-gray-400 hover:text-white"
+              onClick={() => setShowEmojiPicker((p) => !p)}
+            >
+              😊
+            </button>
+          )}
         </div>
       </div>
 
@@ -1552,7 +1573,7 @@ export default function Chatroom({
                         className="max-w-full max-h-32 rounded object-contain"
                       />
                     ) : (
-                      <p className="text-sm text-gray-200 break-words">{m.message}</p>
+                      <p className="text-sm text-gray-200 break-words whitespace-pre-wrap">{m.message}</p>
                     )}
                     {isAdmin && (
                       <button
@@ -1668,7 +1689,7 @@ export default function Chatroom({
             >
               {activeThread.username}
             </span>
-            <p className="mt-1 text-sm text-gray-200">{activeThread.message}</p>
+            <p className="mt-1 text-sm text-gray-200 whitespace-pre-wrap">{activeThread.message}</p>
             <span className="text-xs text-gray-500">
               {formatMessageTime(activeThread.updatedAt)}
             </span>
@@ -1798,7 +1819,7 @@ export default function Chatroom({
                       </p>
                     </div>
                   ) : (
-                    <p className="mt-0.5 text-sm text-gray-200">{msg.message}</p>
+                    <p className="mt-0.5 text-sm text-gray-200 whitespace-pre-wrap">{msg.message}</p>
                   )}
                 </div>
               );

@@ -6,7 +6,7 @@ import JoinServer from './JoinServer';
 it('renders without crashing', () => {
   render(
     <Provider store={mockStore}>
-      <JoinServer userId={1} email="test@test.com" onClose={jest.fn()} onSuccess={jest.fn()} />
+      <JoinServer userId={1} email="test@test.com" onClose={vi.fn()} onSuccess={vi.fn()} />
     </Provider>
   );
 });

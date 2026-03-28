@@ -7,7 +7,7 @@ import ForwardModal from './ForwardModal';
 it('renders without crashing', () => {
   render(
     <Provider store={mockStore}>
-      <ForwardModal messageText="Hello" userId={1} username="user" onClose={jest.fn()} />
+      <ForwardModal messageText="Hello" userId={1} username="user" onClose={vi.fn()} />
     </Provider>
   );
 });

@@ -2,7 +2,7 @@ import '../../__mocks__/socketMock';
 import { render } from '@testing-library/react';
 import Chatroom from './Chatroom';
 
-global.fetch = jest.fn(() => Promise.resolve({ json: () => Promise.resolve([]) })) as jest.Mock;
+global.fetch = vi.fn(() => Promise.resolve({ json: () => Promise.resolve([]) })) as vi.Mock;
 
 it('renders without crashing', () => {
   render(
@@ -16,7 +16,7 @@ it('renders without crashing', () => {
       isAdmin={false}
       serverUserList={[]}
       onlineUsers={new Map()}
-      onStartDM={jest.fn()}
+      onStartDM={vi.fn()}
     />
   );
 });
