@@ -210,6 +210,7 @@ export default function Chatroom({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isTouchRef = useRef(false);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const touchStartPosRef = useRef({ x: 0, y: 0 });
   const prevChatroomIdRef = useRef<number>(activeChatroomId);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -218,6 +219,17 @@ export default function Chatroom({
   useEffect(() => {
     setServerUserList(serverUserListProp);
   }, [serverUserListProp]);
+
+  // When current user's username changes, update it in local messages state
+  const prevUsernameRef = useRef(username);
+  useEffect(() => {
+    const oldUsername = prevUsernameRef.current;
+    if (oldUsername !== username) {
+      setMessages((msgs) => msgs.map((m) => (m.userId === userId ? { ...m, username } : m)));
+      setThreadMessages((msgs) => msgs.map((m) => (m.userId === userId ? { ...m, username } : m)));
+      prevUsernameRef.current = username;
+    }
+  }, [username, userId]);
 
   // Sync onlineUsers from props and listen for live updates
   useEffect(() => {
@@ -289,6 +301,37 @@ export default function Chatroom({
       document.removeEventListener('touchstart', handler);
     };
   }, []);
+
+  // Click outside to cancel edit on desktop
+  useEffect(() => {
+    if (!editingMessage || isMobile) return;
+    const handler = (e: MouseEvent) => {
+      if (editTextareaRef.current && !editTextareaRef.current.contains(e.target as Node)) {
+        setEditingMessage(null);
+        setNewMessage('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [editingMessage, isMobile]);
+
+  // Auto-size inline edit textarea when editingMessage changes (desktop)
+  // Auto-size main textarea when editing on mobile
+  useEffect(() => {
+    if (editingMessage && !isMobile && editTextareaRef.current) {
+      const el = editTextareaRef.current;
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+      el.focus();
+    } else if (editingMessage && isMobile && messageInputRef.current) {
+      const el = messageInputRef.current;
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 316) + 'px';
+      el.focus();
+    } else if (!editingMessage && messageInputRef.current) {
+      messageInputRef.current.style.height = '';
+    }
+  }, [editingMessage, isMobile]);
 
   // Escape key to cancel edit
   useEffect(() => {
@@ -471,6 +514,8 @@ export default function Chatroom({
       messageId: editingMessage.id,
       room: roomKey(serverId, activeChatroomId),
     });
+    setEditingMessage(null);
+    setNewMessage('');
   };
 
   const deleteChatroomMessage = (msg?: Message) => {
@@ -650,10 +695,9 @@ export default function Chatroom({
     setThreadMessage('');
   };
 
-  const USER_ROLES = ['owner', 'admin', 'moderator', 'voice', 'user'] as const;
+  const USER_ROLES = ['admin', 'moderator', 'voice', 'user'] as const;
   const ROLE_LABELS: Record<string, string> = {
-    owner: 'Room Owners',
-    admin: 'Administrators',
+    admin: 'Admins',
     moderator: 'Moderators',
     voice: 'Voice',
     user: 'Users',
@@ -669,7 +713,7 @@ export default function Chatroom({
       <div id="audioElements" className="hidden" />
 
       {/* Mobile overlay to cancel editing by tapping outside */}
-      {editingMessage && (
+      {editingMessage && isMobile && (
         <div
           className="fixed inset-0 z-[1]"
           onMouseDown={() => {
@@ -970,28 +1014,32 @@ export default function Chatroom({
                         </div>
                       )}
 
-                      {/* Message body or edit input */}
-                      {editingMessage?.id === item.id ? (
+                      {/* Message body or inline edit (desktop only) */}
+                      {editingMessage?.id === item.id && !isMobile ? (
                         <div className="relative z-[2]">
-                          <input
-                            className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm"
+                          <textarea
+                            ref={editTextareaRef}
+                            className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm resize-none overflow-hidden"
                             value={newMessage}
-                            enterKeyHint="go"
+                            enterKeyHint="send"
                             onChange={(e) => {
                               if (e.target.value.length < 500) setNewMessage(e.target.value);
+                              const el = e.currentTarget;
+                              el.style.height = 'auto';
+                              el.style.height = el.scrollHeight + 'px';
                             }}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter' && !e.shiftKey) sendEditedMessage();
-                            }}
-                            onBlur={() => {
-                              setEditingMessage(null);
-                              setNewMessage('');
+                              if (e.key === 'Escape') {
+                                setEditingMessage(null);
+                                setNewMessage('');
+                              }
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                sendEditedMessage();
+                              }
                             }}
                           />
-                          <p className="text-xs text-gray-400">
-                            <span className="hidden md:inline">escape to cancel • </span>enter to
-                            save
-                          </p>
+                          <p className="text-xs text-gray-400">escape to cancel • enter to save</p>
                         </div>
                       ) : (
                         <>
@@ -1031,7 +1079,9 @@ export default function Chatroom({
                               className="mt-1 max-w-xs max-h-64 rounded-lg object-contain"
                             />
                           ) : (
-                            <p className="text-sm text-gray-200 whitespace-pre-wrap">{item.message}</p>
+                            <p className="text-sm text-gray-200 whitespace-pre-wrap">
+                              {item.message}
+                            </p>
                           )}
                           {item.reactions && Object.keys(item.reactions).length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
@@ -1103,32 +1153,9 @@ export default function Chatroom({
                     </div>
 
                     {/* Hover action buttons */}
-                    {hover === msgKey && (
+                    {hover === msgKey && editingMessage?.id !== item.id && (
                       <div className="self-start relative flex items-center gap-1 flex-shrink-0 mt-1">
-                        {isAdmin && (
-                          <Tooltip text={item.isPinned ? 'Unpin message' : 'Pin message'}>
-                            <button
-                              className="flex items-center px-1 text-gray-400 hover:text-white"
-                              onClick={() => togglePin(item.id)}
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 w-4"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M15 4.5l-4 4-4 1.5-1.5 1.5 7 7 1.5-1.5 1.5-4 4-4z" />
-                                <line x1="9" y1="15" x2="4.5" y2="19.5" />
-                                <line x1="14.5" y1="4" x2="20" y2="9.5" />
-                              </svg>
-                            </button>
-                          </Tooltip>
-                        )}
-                        <Tooltip text="React">
+                        <Tooltip text="Add reaction">
                           <button
                             className="flex items-center text-gray-400 hover:text-white px-1"
                             onClick={() =>
@@ -1154,10 +1181,37 @@ export default function Chatroom({
                             </svg>
                           </button>
                         </Tooltip>
-                        <Tooltip text="Open thread">
+                        {item.userId === userId && (
+                          <Tooltip text="Edit message">
+                            <button
+                              className="flex items-center text-gray-400 hover:text-white px-1"
+                              onClick={() => {
+                                setEditingMessage(item);
+                                setNewMessage(item.message);
+                                setEditMessage(null);
+                                setMessageMenu(false);
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </button>
+                          </Tooltip>
+                        )}
+                        <Tooltip text="Copy text">
                           <button
                             className="flex items-center text-gray-400 hover:text-white px-1"
-                            onClick={() => openThread(item)}
+                            onClick={() => navigator.clipboard.writeText(item.message)}
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
@@ -1169,8 +1223,8 @@ export default function Chatroom({
                               strokeLinecap="round"
                               strokeLinejoin="round"
                             >
-                              <path d="M3 4h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7l-4 4V6a2 2 0 0 1 2-2z" />
-                              <path d="M17 8h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1v3l-3-3h-2" />
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                             </svg>
                           </button>
                         </Tooltip>
@@ -1226,42 +1280,15 @@ export default function Chatroom({
                             ref={menuRef}
                             className={`absolute right-0 z-50 w-52 rounded-md bg-gray-800 border border-gray-600 shadow-xl py-1 select-none ${menuFlip ? 'bottom-7' : 'top-7'}`}
                           >
-                            {item.userId === userId && (
-                              <button
-                                className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                                onClick={() => {
-                                  setEditingMessage(item);
-                                  setNewMessage(item.message);
-                                  setHover('');
-                                  setEditMessage(null);
-                                  setMessageMenu(false);
-                                }}
-                              >
-                                Edit Message
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4 text-gray-400"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                </svg>
-                              </button>
-                            )}
                             <button
                               className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
                               onClick={() => {
-                                setForwardItem({ text: item.message, id: item.id });
+                                openThread(item);
                                 setMessageMenu(false);
                                 setEditMessage(null);
                               }}
                             >
-                              Forward
+                              Open Thread
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 className="h-4 w-4 text-gray-400"
@@ -1272,31 +1299,8 @@ export default function Chatroom({
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                               >
-                                <polyline points="15 17 20 12 15 7" />
-                                <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
-                              </svg>
-                            </button>
-                            <button
-                              className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                              onClick={() => {
-                                navigator.clipboard.writeText(item.message);
-                                setMessageMenu(false);
-                                setEditMessage(null);
-                              }}
-                            >
-                              Copy Text
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="h-4 w-4 text-gray-400"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                <path d="M3 4h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7l-4 4V6a2 2 0 0 1 2-2z" />
+                                <path d="M17 8h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-1v3l-3-3h-2" />
                               </svg>
                             </button>
                             {isAdmin && (
@@ -1386,8 +1390,26 @@ export default function Chatroom({
           </>
         )}
 
+        {/* Editing banner (mobile only) */}
+        {editingMessage && isMobile && (
+          <div className="relative z-[2] flex items-center justify-between border-t border-gray-600 bg-gray-700/60 px-3 py-1.5 text-xs text-gray-300">
+            <span>Editing message</span>
+            <button
+              className="text-gray-400 hover:text-white transition-colors"
+              onClick={() => {
+                setEditingMessage(null);
+                setNewMessage('');
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Input bar */}
-        <div className="flex items-center gap-2 border-t border-gray-600 px-3 h-14">
+        <div
+          className={`relative z-[2] flex items-end gap-2 px-3 py-2 min-h-[3.5rem] ${editingMessage && isMobile ? 'border-t-0' : 'border-t border-gray-600'}`}
+        >
           <input
             type="file"
             className="hidden"
@@ -1470,29 +1492,51 @@ export default function Chatroom({
             ref={messageInputRef}
             enterKeyHint={isMobile ? 'enter' : 'send'}
             rows={1}
-            className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed leading-5"
+            className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none resize-none disabled:opacity-50 disabled:cursor-not-allowed leading-5 overflow-y-auto"
             placeholder={
-              slowmodeCooldown > 0 ? `Slowmode — wait ${slowmodeCooldown}s` : 'Send a message!'
+              slowmodeCooldown > 0
+                ? `Slowmode — wait ${slowmodeCooldown}s`
+                : editingMessage
+                  ? 'Edit message...'
+                  : 'Send a message!'
             }
-            value={message}
+            value={isMobile && editingMessage ? newMessage : message}
             disabled={slowmodeCooldown > 0}
             onChange={(e) => {
-              if (e.target.value.length < 500) setMessage(e.target.value);
+              if (e.target.value.length < 500)
+                isMobile && editingMessage
+                  ? setNewMessage(e.target.value)
+                  : setMessage(e.target.value);
+              if (isMobile && editingMessage) {
+                const el = e.currentTarget;
+                el.style.height = 'auto';
+                el.style.height = Math.min(el.scrollHeight, 316) + 'px';
+              }
             }}
             onKeyDown={(e) => {
+              if (e.key === 'Escape' && isMobile && editingMessage) {
+                setEditingMessage(null);
+                setNewMessage('');
+                return;
+              }
               if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
                 e.preventDefault();
                 sendMessage();
               }
             }}
           />
-          {message && isMobile ? (
+          {(isMobile && editingMessage ? newMessage : message) && isMobile ? (
             <button
               className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow hover:opacity-90 transition-opacity disabled:opacity-40"
-              onClick={sendMessage}
+              onClick={isMobile && editingMessage ? sendEditedMessage : sendMessage}
               disabled={slowmodeCooldown > 0}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
               </svg>
             </button>
@@ -1573,7 +1617,9 @@ export default function Chatroom({
                         className="max-w-full max-h-32 rounded object-contain"
                       />
                     ) : (
-                      <p className="text-sm text-gray-200 break-words whitespace-pre-wrap">{m.message}</p>
+                      <p className="text-sm text-gray-200 break-words whitespace-pre-wrap">
+                        {m.message}
+                      </p>
                     )}
                     {isAdmin && (
                       <button
@@ -1819,7 +1865,9 @@ export default function Chatroom({
                       </p>
                     </div>
                   ) : (
-                    <p className="mt-0.5 text-sm text-gray-200 whitespace-pre-wrap">{msg.message}</p>
+                    <p className="mt-0.5 text-sm text-gray-200 whitespace-pre-wrap">
+                      {msg.message}
+                    </p>
                   )}
                 </div>
               );
@@ -1862,7 +1910,9 @@ export default function Chatroom({
           onChange={(e) => setFilterQuery(e.target.value)}
         />
         {USER_ROLES.map((role) => {
-          const usersOfRole = filteredUsers.filter((u) => u.type === role);
+          const usersOfRole = filteredUsers.filter((u) =>
+            role === 'admin' ? u.type === 'owner' || u.type === 'admin' : u.type === role
+          );
           if (usersOfRole.length === 0) return null;
           return (
             <div key={role} className="mb-3">
@@ -1870,8 +1920,7 @@ export default function Chatroom({
                 {ROLE_LABELS[role]} — {usersOfRole.length}
               </p>
               {usersOfRole.map((user, i) => {
-                const canMod =
-                  isAdmin && user.username !== username && role !== 'owner' && role !== 'admin';
+                const canMod = isAdmin && user.username !== username && role !== 'admin';
                 return (
                   <div
                     key={i}
@@ -1914,10 +1963,20 @@ export default function Chatroom({
                       />
                     </div>
                     <span
-                      className="truncate text-xs"
+                      className="flex items-center gap-1 min-w-0 text-xs"
                       style={{ color: user.nameColor || '#fde047' }}
                     >
-                      {user.username}
+                      <span className="truncate">{user.username}</span>
+                      {user.type === 'owner' && (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-3 w-3 flex-shrink-0 text-yellow-400"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                      )}
                     </span>
                     {sideUserModalOpen && sideRightClickedUser?.username === user.username && (
                       <div
@@ -2019,7 +2078,6 @@ export default function Chatroom({
           onEdit={() => {
             setEditingMessage(editMessage);
             setNewMessage(editMessage.message);
-            setHover('');
           }}
           onDelete={() => {
             deleteChatroomMessage();

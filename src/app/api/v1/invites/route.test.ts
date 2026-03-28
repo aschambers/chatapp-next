@@ -23,7 +23,9 @@ vi.mock('@/lib/models/User', () => ({
 }));
 
 vi.mock('resend', () => ({
-  Resend: class { emails = { send: () => Promise.resolve({ error: null }) }; }
+  Resend: class {
+    emails = { send: () => Promise.resolve({ error: null }) };
+  },
 }));
 
 import { POST } from './route';

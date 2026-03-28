@@ -1,5 +1,7 @@
 vi.mock('resend', () => ({
-  Resend: class { emails = { send: () => Promise.resolve({ error: null }) }; }
+  Resend: class {
+    emails = { send: () => Promise.resolve({ error: null }) };
+  },
 }));
 
 vi.mock('@/lib/models/User', () => ({

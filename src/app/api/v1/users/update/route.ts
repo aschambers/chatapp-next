@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import User from '@/lib/models/User';
 import Server from '@/lib/models/Server';
+import Message from '@/lib/models/Message';
+import Friend from '@/lib/models/Friend';
 import cloudinary from '@/lib/cloudinary';
 import { signToken, cookieOptions } from '@/lib/auth';
 import sequelize from '@/lib/db';
@@ -24,7 +26,7 @@ export async function PUT(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
 
   await ensureColumns();
-  if (username && username.length > 30)
+  if (username && username.length > 32)
     return NextResponse.json({ error: 'Username too long' }, { status: 400 });
 
   const user = await User.findByPk(userId);
@@ -63,6 +65,22 @@ export async function PUT(req: NextRequest) {
         await server.save();
       }
     }
+  }
+
+  // Sync updated username/nameColor into all messages by this user
+  const messageUpdates: Record<string, unknown> = {};
+  if (username) messageUpdates.username = username;
+  if (nameColor !== null) messageUpdates.nameColor = nameColor || null;
+  if (Object.keys(messageUpdates).length > 0) {
+    await Message.update(messageUpdates, { where: { userId } });
+  }
+
+  // Sync updated username/imageUrl into all Friend records that reference this user
+  if (username || imageUrl) {
+    const friendUpdates: Record<string, unknown> = {};
+    if (username) friendUpdates.username = username;
+    if (imageUrl) friendUpdates.imageUrl = imageUrl;
+    await Friend.update(friendUpdates, { where: { friendId: userId } });
   }
 
   const { password: _, ...safe } = user.toJSON();

@@ -11,6 +11,7 @@ import {
   findUserList,
   resetServerValues,
   patchUserNameColor,
+  patchUserInList,
   kickServerUser,
 } from '@/lib/redux/modules/servers/servers';
 import {
@@ -723,8 +724,8 @@ export default function DashboardClient({
     <div className="flex h-[100dvh] overflow-hidden bg-gray-800 text-white">
       {/* Channel / DM sidebar */}
       <div
-        className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex fixed md:relative inset-0 md:inset-auto z-30 md:z-auto w-full flex-shrink-0 flex-col bg-gray-700`}
-        style={{ width: `${sidebarWidth}px` }}
+        className={`${sidebarOpen ? 'flex' : 'hidden'} md:flex fixed md:relative inset-0 md:inset-auto z-30 md:z-auto w-full md:w-[var(--sb-w)] flex-shrink-0 flex-col bg-gray-700`}
+        style={{ '--sb-w': `${sidebarWidth}px` } as React.CSSProperties}
         onMouseDown={(e) => {
           if (e.button !== 0) return;
           if ((e.target as HTMLElement).closest('button, input, select, a, [role="button"]'))
@@ -1060,7 +1061,7 @@ export default function DashboardClient({
                               />
                             </div>
                             <div className="flex flex-col items-start min-w-0 flex-1">
-                              <span className="truncate text-sm font-medium text-white">
+                              <span className="w-full truncate text-sm font-medium text-white">
                                 {f.username}
                               </span>
                               {relativeTime && (
@@ -1556,8 +1557,14 @@ export default function DashboardClient({
           onClose={() => setShowUserSettings(false)}
           onSaved={(updated) => {
             setCurrentUser((u) => ({ ...u, ...updated }));
-            if ('nameColor' in updated)
-              dispatch(patchUserNameColor({ username, nameColor: updated.nameColor ?? null }));
+            dispatch(
+              patchUserInList({
+                userId: id,
+                ...(updated.username !== undefined ? { username: updated.username } : {}),
+                ...(updated.imageUrl !== undefined ? { imageUrl: updated.imageUrl } : {}),
+                ...('nameColor' in updated ? { nameColor: updated.nameColor ?? null } : {}),
+              })
+            );
           }}
         />
       )}

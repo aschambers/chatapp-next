@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     if (!username || !password || !email) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
-    if (username.length > 30)
+    if (username.length > 32)
       return NextResponse.json({ error: 'Username too long' }, { status: 400 });
 
     const existing = await User.findOne({ where: { [Op.or]: [{ username }, { email }] } });

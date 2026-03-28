@@ -12,6 +12,20 @@ vi.mock('@/lib/models/Server', () => ({
   },
 }));
 
+vi.mock('@/lib/models/Message', () => ({
+  __esModule: true,
+  default: {
+    update: vi.fn().mockResolvedValue([0]),
+  },
+}));
+
+vi.mock('@/lib/models/Friend', () => ({
+  __esModule: true,
+  default: {
+    update: vi.fn().mockResolvedValue([0]),
+  },
+}));
+
 vi.mock('@/lib/cloudinary', () => ({
   __esModule: true,
   default: { uploader: { upload: vi.fn() } },

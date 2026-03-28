@@ -99,6 +99,7 @@ export default function ChatroomFriend({
   const prevMessageCountRef = useRef<number>(0);
   const isTouchRef = useRef(false);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
   const touchStartPosRef = useRef({ x: 0, y: 0 });
 
   const playPing = () => {
@@ -147,9 +148,20 @@ export default function ChatroomFriend({
   const [friendReqId, setFriendReqId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
 
   const effectiveFriendId = friendId ?? userId;
   const isPersonal = effectiveFriendId === userId;
+
+  // When current user's username changes, update it in local messages state
+  const prevUsernameRef = useRef(username);
+  useEffect(() => {
+    const oldUsername = prevUsernameRef.current;
+    if (oldUsername !== username) {
+      setMessages((msgs) => msgs.map((m) => (m.userId === userId ? { ...m, username } : m)));
+      prevUsernameRef.current = username;
+    }
+  }, [username, userId]);
 
   // Fetch friend's avatar
   useEffect(() => {
@@ -215,6 +227,37 @@ export default function ChatroomFriend({
       document.removeEventListener('touchstart', handler);
     };
   }, []);
+
+  // Click outside to cancel edit on desktop
+  useEffect(() => {
+    if (!editingMessage || isMobile) return;
+    const handler = (e: MouseEvent) => {
+      if (editTextareaRef.current && !editTextareaRef.current.contains(e.target as Node)) {
+        setEditingMessage(null);
+        setNewMessage('');
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [editingMessage, isMobile]);
+
+  // Auto-size inline edit textarea when editingMessage changes (desktop)
+  // Auto-size main textarea when editing on mobile
+  useEffect(() => {
+    if (editingMessage && !isMobile && editTextareaRef.current) {
+      const el = editTextareaRef.current;
+      el.style.height = 'auto';
+      el.style.height = el.scrollHeight + 'px';
+      el.focus();
+    } else if (editingMessage && isMobile && messageInputRef.current) {
+      const el = messageInputRef.current;
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 316) + 'px';
+      el.focus();
+    } else if (!editingMessage && messageInputRef.current) {
+      messageInputRef.current.style.height = '';
+    }
+  }, [editingMessage, isMobile]);
 
   // Escape key to cancel edit
   useEffect(() => {
@@ -340,6 +383,8 @@ export default function ChatroomFriend({
       messageId: editingMessage.id,
       room: friendRoom(groupId),
     });
+    setEditingMessage(null);
+    setNewMessage('');
   };
 
   const deleteUserMessage = (msg?: Message) => {
@@ -416,7 +461,7 @@ export default function ChatroomFriend({
   return (
     <div className="flex flex-1 flex-col">
       {/* Mobile overlay to cancel editing by tapping outside */}
-      {editingMessage && (
+      {editingMessage && isMobile && (
         <div
           className="fixed inset-0 z-[1]"
           onMouseDown={() => {
@@ -432,15 +477,15 @@ export default function ChatroomFriend({
 
       {/* Top bar */}
       <div className="flex h-12 flex-shrink-0 items-center gap-2 border-b border-gray-600 px-4">
-        <span className="text-gray-400">@</span>
-        <span className="flex-1 font-semibold">{friendUsername}</span>
+        <span className="text-gray-400 flex-shrink-0">@</span>
+        <span className="flex-1 min-w-0 truncate font-semibold">{friendUsername}</span>
         {!isPersonal && friendReqStatus === 'friends' && (
           <button
             onClick={() => {
               onUnfriend?.();
               setFriendReqStatus('none');
             }}
-            className="rounded px-2 py-0.5 text-xs font-medium bg-gray-600 hover:bg-red-600 text-gray-300 hover:text-white transition-colors"
+            className="flex-shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-gray-600 hover:bg-red-600 text-gray-300 hover:text-white transition-colors"
           >
             Remove Friend
           </button>
@@ -453,12 +498,12 @@ export default function ChatroomFriend({
                 if (onAddFriend) onAddFriend();
                 setFriendReqStatus('sent');
               }}
-              className="rounded px-2 py-0.5 text-xs font-medium bg-yellow-500 hover:bg-yellow-600 text-gray-900 transition-colors"
+              className="flex-shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-yellow-500 hover:bg-yellow-600 text-gray-900 transition-colors"
             >
               Add Friend
             </button>
           ) : friendReqStatus === 'sent' ? (
-            <span className="rounded px-2 py-0.5 text-xs font-medium bg-gray-600 text-gray-300 cursor-default">
+            <span className="flex-shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-gray-600 text-gray-300 cursor-default">
               Pending
             </span>
           ) : friendReqStatus === 'incoming' ? (
@@ -467,7 +512,7 @@ export default function ChatroomFriend({
                 if (friendReqId !== null && onAcceptRequest) onAcceptRequest(friendReqId);
                 setFriendReqStatus('friends');
               }}
-              className="rounded px-2 py-0.5 text-xs font-medium bg-green-600 hover:bg-green-500 text-white transition-colors"
+              className="flex-shrink-0 rounded px-2 py-0.5 text-xs font-medium bg-green-600 hover:bg-green-500 text-white transition-colors"
             >
               Accept
             </button>
@@ -494,10 +539,22 @@ export default function ChatroomFriend({
             setShowSearch((v) => !v);
             if (showSearch) setSearchQuery('');
           }}
-          className={`flex items-center justify-center text-lg leading-none translate-y-0.5 ${showSearch ? 'text-yellow-400' : 'text-gray-400 hover:text-white'}`}
+          className={`flex-shrink-0 flex items-center justify-center ${showSearch ? 'text-white' : 'text-gray-400 hover:text-white'}`}
           title={showSearch ? 'Close search' : 'Search messages'}
         >
-          🔍
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="23" y1="23" x2="16.65" y2="16.65" />
+          </svg>
         </button>
       </div>
 
@@ -590,7 +647,7 @@ export default function ChatroomFriend({
                       <span className="text-xs text-gray-400">
                         {dayjs(item.updatedAt).format('MM/DD/YYYY')}
                       </span>
-                      {hover === msgKey && (
+                      {hover === msgKey && editingMessage?.id !== item.id && (
                         <div className="ml-auto relative flex items-center gap-1">
                           <button
                             className="text-gray-400 hover:text-white"
@@ -599,6 +656,25 @@ export default function ChatroomFriend({
                             }
                           >
                             😊
+                          </button>
+                          <button
+                            className="text-gray-400 hover:text-white flex items-center px-1"
+                            title="Copy text"
+                            onClick={() => navigator.clipboard.writeText(item.message)}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                            </svg>
                           </button>
                           <button
                             className="text-gray-400 hover:text-white"
@@ -622,6 +698,32 @@ export default function ChatroomFriend({
                               <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
                             </svg>
                           </button>
+                          {isSelf && (
+                            <button
+                              className="text-gray-400 hover:text-white flex items-center px-1"
+                              title="Edit message"
+                              onClick={() => {
+                                setEditingMessage(item);
+                                setNewMessage(item.message);
+                                setEditMessage(null);
+                                setMessageMenu(false);
+                              }}
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-4 w-4"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                            </button>
+                          )}
                           <button
                             className="text-gray-400 hover:text-white px-1 text-lg leading-none"
                             onClick={(e) => {
@@ -638,79 +740,6 @@ export default function ChatroomFriend({
                               ref={menuRef}
                               className={`absolute right-0 z-50 w-52 rounded-md bg-gray-800 border border-gray-600 shadow-xl py-1 select-none ${menuFlip ? 'bottom-7' : 'top-7'}`}
                             >
-                              {isSelf && (
-                                <button
-                                  className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                                  onClick={() => {
-                                    setEditingMessage(editMessage!);
-                                    setNewMessage(editMessage!.message);
-                                    setHover('');
-                                    setEditMessage(null);
-                                    setMessageMenu(false);
-                                  }}
-                                >
-                                  Edit Message
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-4 w-4 text-gray-400"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                  </svg>
-                                </button>
-                              )}
-                              <button
-                                className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                                onClick={() => {
-                                  setForwardItem({ text: item.message, id: item.id });
-                                  setMessageMenu(false);
-                                  setEditMessage(null);
-                                }}
-                              >
-                                Forward
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4 text-gray-400"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <polyline points="15 17 20 12 15 7" />
-                                  <path d="M4 18v-2a4 4 0 0 1 4-4h12" />
-                                </svg>
-                              </button>
-                              <button
-                                className="flex w-full items-center justify-between px-3 py-2 text-sm text-white hover:bg-gray-700"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(item.message);
-                                  setMessageMenu(false);
-                                  setEditMessage(null);
-                                }}
-                              >
-                                Copy Text
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4 text-gray-400"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                >
-                                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                                </svg>
-                              </button>
                               {isSelf && (
                                 <button
                                   className="flex w-full items-center justify-between px-3 py-2 text-sm text-red-400 hover:bg-gray-700"
@@ -744,27 +773,32 @@ export default function ChatroomFriend({
                       )}
                     </div>
 
-                    {/* Message body or edit input */}
-                    {editingMessage?.id === item.id ? (
+                    {/* Message body or inline edit (desktop only) */}
+                    {editingMessage?.id === item.id && !isMobile ? (
                       <div className="relative z-[2]">
-                        <input
-                          className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm"
+                        <textarea
+                          ref={editTextareaRef}
+                          className="mt-1 w-full rounded bg-gray-600 px-2 py-1 text-sm resize-none overflow-hidden"
                           value={newMessage}
-                          enterKeyHint="go"
+                          enterKeyHint="send"
                           onChange={(e) => {
                             if (e.target.value.length < 500) setNewMessage(e.target.value);
+                            const el = e.currentTarget;
+                            el.style.height = 'auto';
+                            el.style.height = el.scrollHeight + 'px';
                           }}
                           onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) sendEditedMessage();
-                          }}
-                          onBlur={() => {
-                            setEditingMessage(null);
-                            setNewMessage('');
+                            if (e.key === 'Escape') {
+                              setEditingMessage(null);
+                              setNewMessage('');
+                            }
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              sendEditedMessage();
+                            }
                           }}
                         />
-                        <p className="text-xs text-gray-400">
-                          <span className="hidden md:inline">escape to cancel • </span>enter to save
-                        </p>
+                        <p className="text-xs text-gray-400">escape to cancel • enter to save</p>
                       </div>
                     ) : (
                       <>
@@ -802,7 +836,9 @@ export default function ChatroomFriend({
                             className="mt-1 max-w-xs max-h-64 rounded-lg object-contain"
                           />
                         ) : (
-                          <p className="text-sm text-gray-200 whitespace-pre-wrap">{highlight(item.message)}</p>
+                          <p className="text-sm text-gray-200 whitespace-pre-wrap">
+                            {highlight(item.message)}
+                          </p>
                         )}
                         {item.reactions && Object.keys(item.reactions).length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
@@ -848,8 +884,26 @@ export default function ChatroomFriend({
         </div>
       )}
 
+      {/* Editing banner (mobile only) */}
+      {editingMessage && isMobile && (
+        <div className="relative z-[2] flex items-center justify-between border-t border-gray-600 bg-gray-700/60 px-3 py-1.5 text-xs text-gray-300">
+          <span>Editing message</span>
+          <button
+            className="text-gray-400 hover:text-white transition-colors"
+            onClick={() => {
+              setEditingMessage(null);
+              setNewMessage('');
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Input bar */}
-      <div className="flex items-center gap-2 border-t border-gray-600 px-3 h-14">
+      <div
+        className={`relative z-[2] flex items-end gap-2 px-3 py-2 min-h-[3.5rem] ${editingMessage && isMobile ? 'border-t-0' : 'border-t border-gray-600'}`}
+      >
         <input
           type="file"
           className="hidden"
@@ -922,27 +976,46 @@ export default function ChatroomFriend({
           )}
         </div>
         <textarea
+          ref={messageInputRef}
           enterKeyHint={isMobile ? 'enter' : 'send'}
           rows={1}
-          className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none resize-none leading-5"
-          placeholder="Send a message!"
-          value={message}
+          className="flex-1 rounded bg-gray-600 px-3 py-2 text-sm outline-none resize-none leading-5 overflow-y-auto"
+          placeholder={isMobile && editingMessage ? 'Edit message...' : 'Send a message!'}
+          value={isMobile && editingMessage ? newMessage : message}
           onChange={(e) => {
-            if (e.target.value.length < 500) setMessage(e.target.value);
+            if (e.target.value.length < 500)
+              isMobile && editingMessage
+                ? setNewMessage(e.target.value)
+                : setMessage(e.target.value);
+            if (isMobile && editingMessage) {
+              const el = e.currentTarget;
+              el.style.height = 'auto';
+              el.style.height = Math.min(el.scrollHeight, 316) + 'px';
+            }
           }}
           onKeyDown={(e) => {
+            if (e.key === 'Escape' && isMobile && editingMessage) {
+              setEditingMessage(null);
+              setNewMessage('');
+              return;
+            }
             if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
               e.preventDefault();
               sendMessage();
             }
           }}
         />
-        {message && isMobile ? (
+        {(isMobile && editingMessage ? newMessage : message) && isMobile ? (
           <button
             className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow hover:opacity-90 transition-opacity"
-            onClick={sendMessage}
+            onClick={isMobile && editingMessage ? sendEditedMessage : sendMessage}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
               <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
             </svg>
           </button>
@@ -963,7 +1036,6 @@ export default function ChatroomFriend({
           onEdit={() => {
             setEditingMessage(editMessage);
             setNewMessage(editMessage.message);
-            setHover('');
           }}
           onDelete={() => {
             deleteUserMessage();

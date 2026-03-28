@@ -131,6 +131,26 @@ const serverSlice = createSlice({
       const idx = state.serverUserList.findIndex((u) => u.username === action.payload.username);
       if (idx >= 0) state.serverUserList[idx].nameColor = action.payload.nameColor ?? undefined;
     },
+    patchUserInList: (
+      state,
+      action: {
+        payload: {
+          userId: number;
+          username?: string;
+          imageUrl?: string;
+          nameColor?: string | null;
+        };
+      }
+    ) => {
+      const idx = state.serverUserList.findIndex((u) => u.userId === action.payload.userId);
+      if (idx < 0) return;
+      if (action.payload.username !== undefined)
+        state.serverUserList[idx].username = action.payload.username;
+      if (action.payload.imageUrl !== undefined)
+        state.serverUserList[idx].imageUrl = action.payload.imageUrl;
+      if ('nameColor' in action.payload)
+        state.serverUserList[idx].nameColor = action.payload.nameColor ?? undefined;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(createServer.pending, (s) => {
@@ -264,5 +284,5 @@ const serverSlice = createSlice({
   },
 });
 
-export const { resetServerValues, patchUserNameColor } = serverSlice.actions;
+export const { resetServerValues, patchUserNameColor, patchUserInList } = serverSlice.actions;
 export default serverSlice.reducer;

@@ -46,7 +46,7 @@ export default function SignupPage() {
               type="text"
               value={username}
               onChange={(e) => {
-                if (e.target.value.length <= 30) setUsername(e.target.value);
+                if (e.target.value.length <= 32) setUsername(e.target.value);
               }}
               required
               className="w-full rounded bg-gray-700 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-yellow-400"
