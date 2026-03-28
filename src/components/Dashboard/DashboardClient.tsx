@@ -1475,7 +1475,7 @@ export default function DashboardClient({
             ‹
           </button>
           <span className="truncate text-sm font-semibold">
-            {activeChatroom || currentFriend?.username || 'Home'}
+            {activeChatroom || currentFriend?.username || (activeServer ? '' : 'Home')}
           </span>
         </div>
         {activeChatroomId && serverId && !currentFriend && activeChatroomType === 'text' && (
